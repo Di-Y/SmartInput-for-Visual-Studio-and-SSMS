@@ -26,7 +26,7 @@
 
 ![Visual Studio Smart Input 自动切换输入法演示](docs/assets/smart-input-demo.gif)
 
-![SSMS Smart Input 自动切换输入法演示](docs\assets\SSMS.gif)
+![SSMS Smart Input 自动切换输入法演示](docs/assets/SSMS.gif)
 
 ## 支持范围
 
