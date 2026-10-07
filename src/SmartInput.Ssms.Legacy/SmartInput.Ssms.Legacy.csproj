@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+    SSMS 18 / 19 / 20 (the 32-bit "SSMS 2022" family) run on the Visual Studio 2017 isolated
+    shell (VSSDK 15.x, assembly strong-name version 15.0.0.0). This project compiles the SAME
+    editor sources as the modern package, but against the 15.x reference assemblies, producing
+    an AnyCPU SmartInput.VisualStudio.dll that the 32-bit shell can load. net48 matches
+    SmartInput.Core; SSMS 19/20/22 all run on .NET 4.8.
+
+    This is intentionally a CLASSIC (non-SDK) .NET Framework project, like the other three
+    projects in this solution. The documented build only needs VS 2022 MSBuild + NuGet restore,
+    with NO .NET SDK installed. An SDK-style project here fails on SDK-less build machines with
+    "error MSB4236: The SDK 'Microsoft.NET.Sdk' specified could not be found."
+
+    SSMS 18+ never runs VSIXInstaller, so this project does NOT build a .vsix, does NOT declare
+    the VSSDK project type and does NOT reference VSSDK.BuildTools. The pkgdef and the v1 (2010
+    schema) extension manifest are hand-maintained beside this project and copied to the output
+    folder; tools\Deploy-SSMS-Legacy.ps1 flattens that folder into the SSMS Extensions directory.
+  -->
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" />
+  <PropertyGroup>
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <Platform Condition="'$(Platform)' == ''">AnyCPU</Platform>
+    <ProjectGuid>{C82F2342-DD05-4A76-903B-770DAB252C46}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>SmartInput.VisualStudio</RootNamespace>
+    <AssemblyName>SmartInput.VisualStudio</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <LangVersion>7.3</LangVersion>
+    <OutputPath>bin\$(Configuration)\</OutputPath>
+    <DebugType>portable</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Optimize Condition="'$(Configuration)' == 'Release'">true</Optimize>
+    <NoWarn>$(NoWarn);MSB3277;NU1701;CS8632;CS1591</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <!-- MEF ([Export]/[Import]) under .NET Framework comes from the GAC, not a NuGet package. -->
+    <Reference Include="System.ComponentModel.Composition" />
+    <!-- OleMenuCommandService/MenuCommandService and System.Drawing.Color options pages. -->
+    <Reference Include="System.Design" />
+    <Reference Include="System.Drawing" />
+    <!-- WPF editor surfaces (adornments, margins, IWpfTextView). There are no XAML files, so the
+         WPF markup-compile step is not needed; referencing the WPF assemblies is sufficient. -->
+    <Reference Include="System.Xaml" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Reference assemblies only (ExcludeAssets/PrivateAssets = runtime): never copy the host's
+         own Microsoft.VisualStudio.* DLLs next to our output. -->
+    <PackageReference Include="Microsoft.VisualStudio.Text.UI.Wpf" Version="15.8.525" ExcludeAssets="runtime" PrivateAssets="runtime" />
+    <PackageReference Include="Microsoft.VisualStudio.Shell.15.0" Version="15.8.28010" ExcludeAssets="runtime" PrivateAssets="runtime" />
+    <PackageReference Include="Microsoft.VisualStudio.Shell.Framework" Version="15.8.28010" ExcludeAssets="runtime" PrivateAssets="runtime" />
+    <PackageReference Include="Microsoft.VisualStudio.Threading" Version="15.8.209" ExcludeAssets="runtime" PrivateAssets="runtime" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SmartInput.Core\SmartInput.Core.csproj">
+      <Project>{0E46424E-6D93-4079-9344-0B20FFB09BF0}</Project>
+      <Name>SmartInput.Core</Name>
+    </ProjectReference>
+    <!-- Same editor/IME/package sources as the modern package (AssemblyInfo included), linked
+         rather than copied, so there is still only one copy of every source file. -->
+    <Compile Include="..\SmartInput.VisualStudio\*.cs">
+      <Link>%(Filename)%(Extension)</Link>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Hand-maintained SSMS 18-20 deployment files, surfaced next to the built DLLs. -->
+    <None Include="SmartInput.VisualStudio.pkgdef">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="extension.vsixmanifest">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

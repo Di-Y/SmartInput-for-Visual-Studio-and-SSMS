@@ -4,7 +4,7 @@ using System.Threading;
 
 namespace SmartInput.Core
 {
-    public enum SourceLanguage { Cpp, CSharp }
+    public enum SourceLanguage { Cpp, CSharp, Sql }
     public enum InputMode { Unknown, English, Chinese }
     public enum ContextKind { Code, Comment, String, Character }
 
@@ -94,6 +94,9 @@ namespace SmartInput.Core
                     i += closingBraces;
                     return;
                 }
+                // Transact-SQL has its own comment/string/identifier delimiters and no interpolation,
+                // so it takes a separate branch that never touches the C/C# scanners below.
+                if (language == SourceLanguage.Sql) { ScanSqlChunk(ref i); continue; }
                 if (Starts(i, "//"))
                 {
                     int start = i + 2;
@@ -235,6 +238,105 @@ namespace SmartInput.Core
             }
             Add(ContextKind.Character, start, i);
             if (i < text.Length && text[i] == '\'') i++;
+        }
+
+        // ---- Transact-SQL -------------------------------------------------
+        // T-SQL uses -- line comments, nestable /* */ block comments, single-quoted strings
+        // ('' is an escaped quote; an optional N prefix is just ordinary code), [bracketed]
+        // and "double-quoted" identifiers. Identifiers stay code/English; only comments and
+        // single-quoted strings can recommend Chinese. Backslash is not an escape character.
+        private void ScanSqlChunk(ref int i)
+        {
+            if (Starts(i, "--")) { ScanSqlLineComment(ref i); return; }
+            if (Starts(i, "/*")) { ScanSqlBlockComment(ref i); return; }
+            char c = text[i];
+            if (c == '\'') { ScanSqlString(ref i); return; }
+            if (c == '[') { ScanSqlBracketIdentifier(ref i); return; }
+            if (c == '"') { ScanSqlQuotedIdentifier(ref i); return; }
+            i++;
+        }
+
+        private void ScanSqlLineComment(ref int i)
+        {
+            int start = i + 2;
+            i = start;
+            while (i < text.Length)
+            {
+                CheckCancellation(i);
+                if (text[i] == '\r' || text[i] == '\n') break;
+                i++;
+            }
+            Add(ContextKind.Comment, start, i);
+        }
+
+        private void ScanSqlBlockComment(ref int i)
+        {
+            // T-SQL block comments nest; track depth instead of stopping at the first */.
+            int start = i + 2;
+            i = start;
+            int depth = 1;
+            while (i < text.Length && depth > 0)
+            {
+                CheckCancellation(i);
+                if (Starts(i, "/*")) { depth++; i += 2; }
+                else if (Starts(i, "*/")) { depth--; i += 2; }
+                else i++;
+            }
+            Add(ContextKind.Comment, start, depth == 0 ? i - 2 : i);
+        }
+
+        private void ScanSqlString(ref int i)
+        {
+            // On entry i points at the opening single quote. Literals may span multiple lines.
+            int start = ++i;
+            while (i < text.Length)
+            {
+                CheckCancellation(i);
+                if (text[i] == '\'')
+                {
+                    // A doubled quote is an escaped quote, so the literal keeps going.
+                    if (i + 1 < text.Length && text[i + 1] == '\'') { i += 2; continue; }
+                    Add(ContextKind.String, start, i);
+                    i++;
+                    return;
+                }
+                i++;
+            }
+            Add(ContextKind.String, start, i);
+        }
+
+        private void ScanSqlBracketIdentifier(ref int i)
+        {
+            // [schema].[table]; ]] is an escaped closing bracket. Identifiers are code/English.
+            i++;
+            while (i < text.Length)
+            {
+                CheckCancellation(i);
+                if (text[i] == ']')
+                {
+                    if (i + 1 < text.Length && text[i + 1] == ']') { i += 2; continue; }
+                    i++;
+                    return;
+                }
+                i++;
+            }
+        }
+
+        private void ScanSqlQuotedIdentifier(ref int i)
+        {
+            // With QUOTED_IDENTIFIER ON (the default) double quotes delimit identifiers, not strings.
+            i++;
+            while (i < text.Length)
+            {
+                CheckCancellation(i);
+                if (text[i] == '"')
+                {
+                    if (i + 1 < text.Length && text[i + 1] == '"') { i += 2; continue; }
+                    i++;
+                    return;
+                }
+                i++;
+            }
         }
 
         private bool IsDigitSeparator(int i)

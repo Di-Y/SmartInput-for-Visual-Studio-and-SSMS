@@ -77,8 +77,11 @@ try {
     $manifest = Read-ZipXml -Archive $archive -EntryName 'extension.vsixmanifest'
     $ns = [System.Xml.XmlNamespaceManager]::new($manifest.NameTable)
     $ns.AddNamespace('v', 'http://schemas.microsoft.com/developer/vsx-schema/2011')
-    $target = Select-RequiredNode -Document $manifest -Query '//v:InstallationTarget' -NamespaceManager $ns -Name 'InstallationTarget'
-    if ($target.Version -ne '[17.14,)' -or $target.ProductArchitecture -ne 'amd64') { throw 'VSIX target version or architecture is invalid.' }
+    $targets = @($manifest.SelectNodes('//v:InstallationTarget', $ns))
+    $community = $targets | Where-Object { $_.Id -eq 'Microsoft.VisualStudio.Community' } | Select-Object -First 1
+    $ssms = $targets | Where-Object { $_.Id -eq 'Microsoft.VisualStudio.Ssms' } | Select-Object -First 1
+    if ($null -eq $community -or $community.Version -ne '[17.14,)' -or $community.ProductArchitecture -ne 'amd64') { throw 'Visual Studio target version or architecture is invalid.' }
+    if ($null -eq $ssms -or $ssms.ProductArchitecture -ne 'amd64') { throw 'SSMS 22 (2025) installation target is missing or invalid.' }
     $asset = Select-RequiredNode -Document $manifest -Query "//v:Asset[@Type='Microsoft.VisualStudio.MefComponent']" -NamespaceManager $ns -Name 'MEF asset'
     if ($asset.Path -ne 'SmartInput.VisualStudio.dll') { throw 'MEF entry is invalid.' }
     $packageAsset = Select-RequiredNode -Document $manifest -Query "//v:Asset[@Type='Microsoft.VisualStudio.VsPackage']" -NamespaceManager $ns -Name 'VS Package asset'

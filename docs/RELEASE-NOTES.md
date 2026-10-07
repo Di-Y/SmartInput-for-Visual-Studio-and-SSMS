@@ -2,6 +2,84 @@
 
 作者：**我在人间做废物**
 
+## 0.3.1
+
+状态：工程修复版。不新增功能，不改变支持范围与交互规则；修复在 Visual Studio 中打开解决方案时，多个 `Microsoft.VisualStudio.*` 命名空间（Shell / Utilities / Text / Threading 等）在 IDE 设计时（智能提示 / 错误列表）报“类型或命名空间不存在”的问题。
+
+包路径与 0.3.0 相同：
+
+```text
+Visual Studio 2022/2026 + SSMS 22（x64）：src/SmartInput.VisualStudio/bin/Release/SmartInput.VisualStudio.vsix
+SSMS 18/19/20（32 位）平铺负载：src/SmartInput.Ssms.Legacy/bin/Release/
+```
+
+SHA256：构建完成后以本地 `tools/Verify-Package.ps1`、`tools/Verify-LegacyPackage.ps1` 的输出为准（未签名、本地构建）。
+
+### 修复
+
+- 彻底修复在 Visual Studio IDE 中打开解决方案时，`Microsoft.VisualStudio.*` 命名空间（Shell、Utilities、Text、Threading 等）在设计时（智能提示 / 错误列表）报“类型或命名空间不存在”的问题。
+  - 真正根因：现代包（VSSDK 17）工程此前用硬编码相对 HintPath 引用 VSSDK.BuildTools 包内部 `tools\vssdk`（及 `tools\vssdk\bin\lib`）下的 Shell、Interop、Threading、Validation、Utilities 等程序集。这些路径写死在仓库本地的 `.packages` 目录，且依赖该包的内部目录布局；命令行按仓库 `NuGet.Config` 还原到 `.packages` 时能编译通过，但 Visual Studio 的设计时构建一旦尚未完成还原、或把包还原到全局缓存等其它位置，这些 HintPath 就会整体失效，于是所有相关命名空间集体报红。上一版仅补单个 Utilities 的 HintPath 仍保留了其余脆弱引用，未能根治。
+  - 修复方式（只改工程、不改任何功能源码）：将现代工程的 Visual Studio 引用程序集全部改为官方 VSSDK 17 NuGet `PackageReference`（`Text.UI.Wpf 17.14.249`、`Shell.15.0 17.14.40264`、`Shell.Framework 17.14.40264`、`Threading 17.14.15`、`Imaging.Interop.14.0.DesignTime 17.14.40254`，均 `ExcludeAssets/PrivateAssets=runtime`），与 SSMS Legacy 工程使用 VSSDK 15 正规包的方式完全同构；Utilities、Interop、ComponentModelHost、Imaging 等同代程序集由 Shell.15.0 的 NuGet 依赖闭包自动带入。`VSSDK.BuildTools` 仅保留为打包工具（CreatePkgDef / VSIX 容器 / .vsct 编译）。
+  - 由此删除了全部指向 VSSDK.BuildTools 内部路径的 HintPath，以及仅供 pkgdef 反射兜底、同样写死 `.packages` 相对路径的 `AddVssdkBinLibToCreatePkgDefReferences` 目标；NuGet 在命令行与 IDE 设计时都通过 `$(NuGetPackageRoot)` 绝对路径提供同一套程序集，与包被还原到哪个文件夹无关。
+- 消除 `Microsoft.Bcl.AsyncInterfaces` 的程序集版本冲突警告（MSB3277）：VSSDK 17.14 的 Shell / Shell.Framework / Utilities / Imaging / Threading 以及 System.Text.Json 9.0 闭包均要求 `Microsoft.Bcl.AsyncInterfaces 9.0.0`，而工程此前显式钉在 8.0.0；NuGet 以 8.0.0 为主引用，VS 宿主 PublicAssemblies 与传递包却统一到 9.0.0.0，于是 IDE 与构建输出 MSB3277。现把显式引用对齐到 **9.0.0**（仍 `ExcludeAssets=runtime`，运行时由 VS 2022 17.14 / SSMS 22 宿主自带的 9.0.0.0 提供），命令行 Rebuild 与 IDE 设计时构建均不再出现该警告；该程序集仅为传递依赖、扩展并不直接引用，也不会拷入 VSIX。
+- 版本号统一为 0.3.1：现代 VSIX Identity、Legacy `extension.vsixmanifest` 与手写 `.pkgdef`、`SmartInput.Core` / `SmartInput.VisualStudio` 程序集版本、`InstalledProductRegistration` 及相关文档。
+
+### 说明
+
+- 改用正规 NuGet 包闭包后，现代工程的 Visual Studio 引用在设计时与命令行完全一致，且不再依赖 VSSDK.BuildTools 的内部目录或仓库 `.packages` 的固定位置；干净构建不再出现此前 Shell 同代深层程序集（Utilities、ComponentModelHost、Imaging、ImageCatalog、StreamJsonRpc 等）未解析的提示。
+- 现代 VSIX 仍为 8 个条目，不捆绑任何宿主程序集（所有 VS 引用程序集均不拷入输出 / VSIX）；现代 DLL 为 AnyCPU (ILOnly)、绑定 VSSDK 17（Shell / Text / Utilities 等为 17.0.0.0，Threading 为 17.14.0.0），可在 64 位 Visual Studio 2022/2026 与 SSMS 22 中加载。Legacy 负载仍为 ILOnly / AnyCPU，引用程序集全部绑定 VSSDK 15。
+
+### 验证与已知边界
+
+- Release 干净重建 0 错误，**138 项自动化测试全部通过**（数量与 0.3.0 相同，本版未改功能）；`Verify-Package.ps1` 与 `Verify-LegacyPackage.ps1` 均通过，程序集文件版本与 VSIX 版本一致为 0.3.1。
+- 额外完成两项工程级验证：① 以设计时构建（`DesignTimeBuild`）枚举 IDE 实际引用路径，Shell / Utilities / Interop / Text / Threading 等全套程序集均来自正规 NuGet 包，无一条 VSSDK.BuildTools 内部 HintPath；② 将包还原到与仓库 `.packages` 完全无关的全新全局文件夹、删除 bin/obj 重新还原后再做设计时构建，21 个 Visual Studio 引用仍全部正确解析，证明结果与还原位置无关。
+- 在未安装 .NET SDK、仅 VS 2022 MSBuild + NuGet 还原的环境下完整跑通 Restore → Build → 测试 → 双校验。
+- 0.3.1 阶段已在 SSMS 22（22.10.12210.168 / x64）完成首轮实机验证：手动部署、MEF 加载、`工具` 菜单命令、左下角状态栏、T-SQL 代码 / 注释上下文识别均通过、无崩溃；**SSMS 22 + 搜狗拼音下，移动光标自动中英文切换与手动 Shift 切换 / 手动覆盖均经物理键盘实测通过**；SSMS 22 + 微软拼音（未单独测）以及 SSMS 18/19/20 仍待实测。详见 `docs/VALIDATION.md` 与 `docs/MANUAL-TESTS.md`。
+
+## 0.3.0
+
+状态：功能版。新增 Transact-SQL 语言与 SQL Server Management Studio（SSMS）支持，采用现代包 + 32 位 Legacy 包双构建。
+
+包路径：
+
+```text
+Visual Studio 2022/2026 + SSMS 22（x64）：src/SmartInput.VisualStudio/bin/Release/SmartInput.VisualStudio.vsix
+SSMS 18/19/20（32 位）平铺负载：src/SmartInput.Ssms.Legacy/bin/Release/
+```
+
+SHA256：构建完成后以本地 `tools/Verify-Package.ps1`、`tools/Verify-LegacyPackage.ps1` 的输出为准（未签名、本地构建）。
+
+### 新增
+
+- 新增 Transact-SQL（T-SQL）词法分析：
+  - `--` 单行注释、`/* ... */` 块注释（支持嵌套）正文推荐中文。
+  - 单引号字符串 `'...'` / `N'...'`，支持 `''` 转义与跨行；含汉字推荐中文，空串 / 纯英文 / 仅 emoji 推荐英文。
+  - `[方括号]`（`]]` 转义）与 `"双引号"`（`""` 转义）标识符一律按代码推荐英文，即使其中包含汉字。
+  - 字符串内部的 `--`、`/*` 不视为注释，括号标识符内部的引号 / `--` 不视为字符串 / 注释；T-SQL 无字符字面量与插值，反斜杠非转义符。
+- 编辑器接入层在精确 `SQL` ContentType 之外，新增运行时按类型名（含 “SQL”）兜底的监听器与状态栏提供器，兼容 SSMS 中改名 / 派生的 T-SQL 编辑器类型，且不接管其它代码编辑器。
+- 现代包（VSSDK 17，x64）清单新增 `Microsoft.VisualStudio.Ssms [21.0,23.0)`（amd64）安装目标，覆盖 SSMS 22（2025）。
+- 新增 `src/SmartInput.Ssms.Legacy`：以 VSSDK 15 引用程序集、net48、AnyCPU 编译同一份编辑器源码，绑定 `Microsoft.VisualStudio.* 15.0.0.0`，用于 32 位 SSMS 18/19/20；手写 `.pkgdef` 与 v1（2010 schema）`extension.vsixmanifest`。
+- 新增手动部署 / 卸载脚本 `tools/Deploy-SSMS22.ps1`、`tools/Deploy-SSMS-Legacy.ps1`，自动平铺文件、清理私有注册表与 MEF 缓存、写入 `extensions.configurationchanged`、解除网络标记。
+- 新增 `samples/Contexts.sql` 交互检查样例；新增 `tools/Verify-LegacyPackage.ps1` 校验 Legacy 负载。
+
+### 变更
+
+- 版本号统一升至 0.3.0（VSIX Identity、程序集、`InstalledProductRegistration`）。
+- 显示名称更新为 `Smart Input for Visual Studio and SSMS`。
+- 解决方案与 `build.ps1` 现一次性构建现代包、Legacy 包与测试，并分别校验。
+- 构建可移植性修复：整套工程在**未安装 .NET SDK** 的机器上，仅靠 Visual Studio 2022 / Build Tools 的 MSBuild 加 NuGet 还原即可完整构建，兑现 README“不需要 .NET SDK”的承诺：
+  - `SmartInput.Ssms.Legacy` 由 SDK-style 工程改写为传统非 SDK 的 .NET Framework 4.8 / AnyCPU 类库工程，消除仅安装 MSBuild 时的 `MSB4236：找不到 SDK "Microsoft.NET.Sdk"`。
+  - 现代包工程在仅 NuGet 还原（无 VS SDK 扩展开发工作负载）时，向 CreatePkgDef 任务补入 VSSDK.BuildTools `tools\vssdk\bin\lib` 下的 VS 17 引用程序集，修复 `CreatePkgDef：未能加载文件或程序集 Microsoft.VisualStudio.Utilities 17.0.0.0`；这些程序集仅供生成 pkgdef 时反射读取，既不参与编译引用，也不会拷入 VSIX（VSIX 仍为 8 个条目、不捆绑宿主程序集）。
+  - `build.ps1` 修正测试程序集定位：解决方案将 Tests 工程固定映射到 Debug|x86，现按实际输出查找本次最新构建的 `SmartInput.Tests.exe`，不再依赖恰好残留的 `bin\Release` 旧副本（全新清理后此前会报测试程序集不存在）。
+
+### 验证与已知边界
+
+- Release 构建、**138 项自动化测试**（较 0.2.1 新增 34 项 T-SQL 用例，含三语言随机文本边界安全）全部通过。
+- 现代 VSIX 校验通过（含 SSMS 22 安装目标）；Legacy 负载校验通过（AnyCPU、ILOnly、引用程序集均为 VSSDK 15、pkgdef 与 v1 清单要素完整）。
+- 构建机未安装 SSMS，SSMS 18/19/20/22 的实机加载与宿主内输入法切换尚未经实机验证，详见 `docs/VALIDATION.md` 与 `docs/MANUAL-TESTS.md`。
+- SSMS 18/19/20 Legacy 包不注册“工具”菜单命令（该宿主不编译菜单资源），暂停 / 恢复请使用编辑器底部状态栏按钮。
+- 已在“无 .NET SDK”条件下复现完整构建：从 PATH 移除 dotnet、清空 `MSBuildSDKsPath`/`DOTNET_ROOT` 并清空各工程 bin/obj 后运行 `build.ps1 -Configuration Release`，NuGet 还原 → 四个工程构建 → 138 项测试 → 现代 VSIX 与 Legacy 负载双校验全部通过。
+
 ## 0.2.1
 
 状态：修复版。针对搜狗输入法在 Visual Studio 2026 中状态写入成功但实际输入态未切换的问题进行兼容性修复。

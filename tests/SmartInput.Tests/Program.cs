@@ -72,6 +72,7 @@ namespace SmartInput.Tests
             CSharp("C#双美元原始单括号正文", "var s = $$\"\"\"中文{¦count}\"\"\";", ContextKind.String, InputMode.Chinese);
             CSharp("C#空原始字符串后", "var s = \"\"\"\"\"\";¦", ContextKind.Code, InputMode.English);
 
+            SqlTests();
             PolicyTests();
             InputMethodProfileTests();
             RobustnessTests();
@@ -81,6 +82,7 @@ namespace SmartInput.Tests
         }
 
         private static void CSharp(string name, string marked, ContextKind kind, InputMode mode) => Case(name, marked, kind, mode, SourceLanguage.CSharp);
+        private static void Sql(string name, string marked, ContextKind kind, InputMode mode) => Case(name, marked, kind, mode, SourceLanguage.Sql);
         private static void Case(string name, string marked, ContextKind kind, InputMode mode, SourceLanguage language = SourceLanguage.Cpp)
         {
             Check(name, () =>
@@ -89,6 +91,44 @@ namespace SmartInput.Tests
                 var result = ContextAnalyzer.Analyze(marked.Remove(position, 1), language).At(position);
                 Assert(result.Kind == kind && result.Recommended == mode, $"expected {kind}/{mode}, got {result.Kind}/{result.Recommended}");
             });
+        }
+
+        private static void SqlTests()
+        {
+            Sql("SQL空文件", "¦", ContextKind.Code, InputMode.English);
+            Sql("SQL普通代码", "SELECT cou¦nt FROM dbo.[Order]", ContextKind.Code, InputMode.English);
+            Sql("SQL中文标识符仍属代码", "SELECT 数¦量 FROM t", ContextKind.Code, InputMode.English);
+            Sql("SQL负数单减号不是注释", "WHERE x = -¦1", ContextKind.Code, InputMode.English);
+            Sql("SQL单行注释", "-- ¦查询用户", ContextKind.Comment, InputMode.Chinese);
+            Sql("SQL英文注释也切中文", "-- TO¦DO", ContextKind.Comment, InputMode.Chinese);
+            Sql("SQL注释行尾", "-- 中文¦\nSELECT 1", ContextKind.Comment, InputMode.Chinese);
+            Sql("SQL注释换行后代码", "-- 中文\nSEL¦ECT 1", ContextKind.Code, InputMode.English);
+            Sql("SQL块注释", "/* one\n ¦two */", ContextKind.Comment, InputMode.Chinese);
+            Sql("SQL嵌套块注释内层", "/* outer /* in¦ner */ still */", ContextKind.Comment, InputMode.Chinese);
+            Sql("SQL嵌套块注释外层", "/* outer /* inner */ sti¦ll */", ContextKind.Comment, InputMode.Chinese);
+            Sql("SQL嵌套块注释闭合后", "/* a /* b */ c */ SEL¦ECT 1", ContextKind.Code, InputMode.English);
+            Sql("SQL未闭合嵌套注释", "/* a /* b ¦", ContextKind.Comment, InputMode.Chinese);
+            Sql("SQL块注释结束后", "/* 中文 */ ¦SELECT 1", ContextKind.Code, InputMode.English);
+            Sql("SQL空字符串", "'¦'", ContextKind.String, InputMode.English);
+            Sql("SQL英文字符串", "WHERE n = 'ab¦c'", ContextKind.String, InputMode.English);
+            Sql("SQL中文字符串", "N'加载成¦功'", ContextKind.String, InputMode.Chinese);
+            Sql("SQL中文字符串无前缀", "'查询用¦户'", ContextKind.String, InputMode.Chinese);
+            Sql("SQL转义单引号英文", "'it''s ¦ok'", ContextKind.String, InputMode.English);
+            Sql("SQL转义单引号中文", "'中文''继¦续'", ContextKind.String, InputMode.Chinese);
+            Sql("SQL字符串跨行", "N'第一行\n第二行¦'", ContextKind.String, InputMode.Chinese);
+            Sql("SQL字符串后代码", "N'中文' ¦", ContextKind.Code, InputMode.English);
+            Sql("SQL字符串前代码", "SET @s = ¦N'中文'", ContextKind.Code, InputMode.English);
+            Sql("SQL字符串内横线非注释", "'a-- ¦b'", ContextKind.String, InputMode.English);
+            Sql("SQL字符串内块注释符号", "'/* ¦ */'", ContextKind.String, InputMode.English);
+            Sql("SQL未闭合字符串", "'中文¦", ContextKind.String, InputMode.Chinese);
+            Sql("SQL方括号标识符", "SELECT [列¦名] FROM t", ContextKind.Code, InputMode.English);
+            Sql("SQL方括号内引号横线", "[a'-- ¦x]", ContextKind.Code, InputMode.English);
+            Sql("SQL方括号转义", "[a]]b] ¦FROM t", ContextKind.Code, InputMode.English);
+            Sql("SQL双引号标识符", "SELECT \"列¦名\" FROM t", ContextKind.Code, InputMode.English);
+            Sql("SQL双引号内横线", "\"a-- ¦b\"", ContextKind.Code, InputMode.English);
+            Sql("SQL括号后字符串中文", "[t] SET @s = '加¦载'", ContextKind.String, InputMode.Chinese);
+            Sql("SQL仅emoji字符串", "'😀¦'", ContextKind.String, InputMode.English);
+            Sql("SQL扩展区汉字", "'\U00020000¦'", ContextKind.String, InputMode.Chinese);
         }
 
         private static void PolicyTests()
@@ -124,7 +164,7 @@ namespace SmartInput.Tests
             Check("随机文本所有插入位置安全", () =>
             {
                 var random = new Random(2026);
-                const string alphabet = "abc123中/\\\"'{}()$@*\r\n";
+                const string alphabet = "abc123中/\\\"'{}()$@*-[]\r\n";
                 for (int sample = 0; sample < 300; sample++)
                 {
                     var chars = new char[random.Next(1, 160)];

@@ -25,7 +25,7 @@ namespace SmartInput.VisualStudio
     }
 
     [Export(typeof(IWpfTextViewCreationListener))]
-    [ContentType("C/C++"), ContentType("CSharp")]
+    [ContentType("C/C++"), ContentType("CSharp"), ContentType(EditorLanguage.Sql)]
     [TextViewRole(PredefinedTextViewRoles.Document)]
     [TextViewRole(PredefinedTextViewRoles.Editable)]
     internal sealed class ViewListener : IWpfTextViewCreationListener
@@ -39,10 +39,44 @@ namespace SmartInput.VisualStudio
         public void TextViewCreated(IWpfTextView textView) { Sessions.Get(textView); }
     }
 
+    // Some SSMS builds surface the T-SQL query editor under a content type derived from "code" whose
+    // name is not literally "SQL" (e.g. a T-SQL / SQL Server Tools type). Listen on "code" and filter
+    // to SQL-like types at runtime so the session still attaches, without taking other editors over.
+    [Export(typeof(IWpfTextViewCreationListener))]
+    [ContentType("code")]
+    [TextViewRole(PredefinedTextViewRoles.Document)]
+    [TextViewRole(PredefinedTextViewRoles.Editable)]
+    internal sealed class SqlFallbackListener : IWpfTextViewCreationListener
+    {
+        [Import] internal SessionFactory Sessions = null;
+        public void TextViewCreated(IWpfTextView textView)
+        {
+            if (EditorLanguage.IsSqlDerivedOnly(textView.TextBuffer.ContentType)) Sessions.Get(textView);
+        }
+    }
+
+    [Export(typeof(IWpfTextViewMarginProvider))]
+    [Name(SmartInputMargin.MarginName + ".SqlFallback")]
+    [MarginContainer(PredefinedMarginNames.Bottom)]
+    [ContentType("code")]
+    [TextViewRole(PredefinedTextViewRoles.Document)]
+    [TextViewRole(PredefinedTextViewRoles.Editable)]
+    internal sealed class SqlFallbackMarginProvider : IWpfTextViewMarginProvider
+    {
+        [Import] internal SessionFactory Sessions = null;
+        public IWpfTextViewMargin CreateMargin(IWpfTextViewHost host, IWpfTextViewMargin container)
+        {
+            // Only attach to renamed SQL-like types not already covered by the exact "SQL" export;
+            // every other "code" editor (plain text, other languages) is left untouched.
+            if (!EditorLanguage.IsSqlDerivedOnly(host.TextView.TextBuffer.ContentType)) return null;
+            return new SmartInputMargin(Sessions.Get(host.TextView));
+        }
+    }
+
     [Export(typeof(IWpfTextViewMarginProvider))]
     [Name(SmartInputMargin.MarginName)]
     [MarginContainer(PredefinedMarginNames.Bottom)]
-    [ContentType("C/C++"), ContentType("CSharp")]
+    [ContentType("C/C++"), ContentType("CSharp"), ContentType(EditorLanguage.Sql)]
     [TextViewRole(PredefinedTextViewRoles.Document)]
     [TextViewRole(PredefinedTextViewRoles.Editable)]
     internal sealed class MarginProvider : IWpfTextViewMarginProvider
@@ -156,6 +190,31 @@ namespace SmartInput.VisualStudio
         private static void RaiseChanged()
         {
             Changed?.Invoke(null, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>Identifies the Transact-SQL query editor across Visual Studio and SSMS content types.</summary>
+    internal static class EditorLanguage
+    {
+        public const string Sql = "SQL";
+
+        public static bool IsSql(Microsoft.VisualStudio.Utilities.IContentType contentType)
+        {
+            if (contentType == null) return false;
+            if (contentType.IsOfType(Sql)) return true;
+            // Derived/renamed SQL types seen in SSMS (T-SQL, SQL Server Tools, ...).
+            string name = contentType.TypeName;
+            return name != null && name.IndexOf("SQL", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        // True only for SQL-like types that are NOT a proper "SQL" subtype. This covers renamed
+        // SSMS T-SQL types via the "code" fallback without double-handling views the primary
+        // [ContentType("SQL")] listener/margin exports already attach to.
+        public static bool IsSqlDerivedOnly(Microsoft.VisualStudio.Utilities.IContentType contentType)
+        {
+            if (contentType == null || contentType.IsOfType(Sql)) return false;
+            string name = contentType.TypeName;
+            return name != null && name.IndexOf("SQL", StringComparison.OrdinalIgnoreCase) >= 0;
         }
     }
 }

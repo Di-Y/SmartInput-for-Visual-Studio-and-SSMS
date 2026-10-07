@@ -34,29 +34,38 @@
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
-    <Reference Include="Microsoft.VisualStudio.Shell.15.0">
-      <HintPath>..\..\.packages\microsoft.vssdk.buildtools\17.14.2142\tools\vssdk\Microsoft.VisualStudio.Shell.15.0.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="Microsoft.VisualStudio.Shell.Framework">
-      <HintPath>..\..\.packages\microsoft.vssdk.buildtools\17.14.2142\tools\vssdk\Microsoft.VisualStudio.Shell.Framework.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="Microsoft.VisualStudio.Interop">
-      <HintPath>..\..\.packages\microsoft.vssdk.buildtools\17.14.2142\tools\vssdk\bin\lib\Microsoft.VisualStudio.Interop.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="Microsoft.VisualStudio.Threading">
-      <HintPath>..\..\.packages\microsoft.vssdk.buildtools\17.14.2142\tools\vssdk\Microsoft.VisualStudio.Threading.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="Microsoft.VisualStudio.Validation">
-      <HintPath>..\..\.packages\microsoft.vssdk.buildtools\17.14.2142\tools\vssdk\Microsoft.VisualStudio.Validation.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <PackageReference Include="Microsoft.VisualStudio.Text.UI.Wpf" Version="17.14.249" ExcludeAssets="runtime" />
-    <PackageReference Include="Microsoft.VisualStudio.Imaging.Interop.14.0.DesignTime" Version="17.13.40008" ExcludeAssets="runtime" />
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" ExcludeAssets="runtime" />
+    <!--
+      All Visual Studio editor/shell reference assemblies come from the OFFICIAL VSSDK 17 NuGet
+      packages - the same pattern the SSMS Legacy project already uses for VSSDK 15. We deliberately
+      do NOT add <Reference><HintPath> entries into VSSDK.BuildTools' tools\vssdk folder: those paths
+      are hard-wired to the repo-local .packages folder AND to that package's internal layout (some
+      sibling assemblies, e.g. Microsoft.VisualStudio.Utilities, live under tools\vssdk\bin\lib,
+      which assembly resolution never searches). Such HintPaths break in the Visual Studio IDE
+      design-time build whenever package restore has not finished or puts packages in the global
+      cache instead of .packages, and then every 'using Microsoft.VisualStudio.*' is flagged as
+      "type or namespace does not exist", even though the command-line build happens to succeed.
+
+      NuGet PackageReference instead supplies the same assemblies through $(NuGetPackageRoot)
+      absolute paths in BOTH the command-line build and the IDE design-time build, regardless of
+      where the packages are restored. The Shell.15.0 package pulls Utilities, ComponentModelHost,
+      Interop, Imaging and the remaining shell assemblies in through its normal dependency closure
+      (the same reason the Legacy project needs no explicit Utilities reference). ExcludeAssets/
+      PrivateAssets=runtime keeps every host DLL out of the output and the VSIX; VSSDK.BuildTools
+      remains only as the packaging toolset (CreatePkgDef, VSIX container, .vsct compilation).
+    -->
+    <PackageReference Include="Microsoft.VisualStudio.Text.UI.Wpf" Version="17.14.249" ExcludeAssets="runtime" PrivateAssets="runtime" />
+    <PackageReference Include="Microsoft.VisualStudio.Shell.15.0" Version="17.14.40264" ExcludeAssets="runtime" PrivateAssets="runtime" />
+    <PackageReference Include="Microsoft.VisualStudio.Shell.Framework" Version="17.14.40264" ExcludeAssets="runtime" PrivateAssets="runtime" />
+    <PackageReference Include="Microsoft.VisualStudio.Threading" Version="17.14.15" ExcludeAssets="runtime" PrivateAssets="runtime" />
+    <PackageReference Include="Microsoft.VisualStudio.Imaging.Interop.14.0.DesignTime" Version="17.14.40254" ExcludeAssets="runtime" PrivateAssets="runtime" />
+    <!-- The VSSDK 17.14 shell closure (Shell.15.0/Shell.Framework/Utilities/Imaging/Threading and
+         System.Text.Json 9.0) requires Microsoft.Bcl.AsyncInterfaces 9.0.0. Pinning 8.0.0 here makes
+         NuGet restore 8.0.0 as the primary reference while the VS host's PublicAssemblies and the
+         transitive packages unify to 9.0.0.0, raising MSB3277. Keep this at 9.0.0 to match the
+         Visual Studio 2022 17.14 / SSMS 22 host (which ships Microsoft.Bcl.AsyncInterfaces
+         9.0.0.0); ExcludeAssets=runtime means it is compiled against but never copied into the
+         VSIX - the host provides it at run time. -->
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.0" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.14.2142" PrivateAssets="all" />
     <ProjectReference Include="..\SmartInput.Core\SmartInput.Core.csproj">
       <Project>{0E46424E-6D93-4079-9344-0B20FFB09BF0}</Project>
@@ -71,6 +80,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="Exists('$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets')" />
+
   <Target Name="SyncVsixManifestIdentity"
           AfterTargets="DetokenizeVsixManifestFile"
           BeforeTargets="CopyVsixManifestFile;CreateVsixContainer"

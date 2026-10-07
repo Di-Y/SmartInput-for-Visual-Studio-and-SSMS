@@ -20,11 +20,30 @@ try {
     }
     & $MSBuildPath 'SmartInput.sln' "/p:Configuration=$Configuration" /nr:false /v:minimal /nologo
     if ($LASTEXITCODE -ne 0) { throw "Build failed: $LASTEXITCODE" }
-    $testPath = Join-Path $PSScriptRoot "tests\SmartInput.Tests\bin\$Configuration\SmartInput.Tests.exe"
+    # The solution maps the Tests project to Debug|x86 for BOTH solution configurations, so the
+    # test executable is built into bin\Debug regardless of -Configuration. Locate the freshly
+    # built executable robustly instead of assuming bin\<Configuration> (which only worked before
+    # when a stale bin\Release copy happened to exist).
+    $testBinDir = Join-Path $PSScriptRoot 'tests\SmartInput.Tests\bin'
+    $testPath = Join-Path $testBinDir "$Configuration\SmartInput.Tests.exe"
+    if (-not (Test-Path -LiteralPath $testPath)) {
+        $newest = Get-ChildItem -LiteralPath $testBinDir -Recurse -Filter 'SmartInput.Tests.exe' -ErrorAction SilentlyContinue |
+            Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        if ($newest) { $testPath = $newest.FullName }
+    }
+    if (-not (Test-Path -LiteralPath $testPath)) { throw 'SmartInput.Tests.exe was not found; build the solution before running tests.' }
+    Write-Host "Running tests: $testPath"
     & $testPath
     if ($LASTEXITCODE -ne 0) { throw "Tests failed: $LASTEXITCODE" }
     & (Join-Path $PSScriptRoot 'tools\Verify-Package.ps1') -Configuration $Configuration
-    Write-Host "Done. Package: src\SmartInput.VisualStudio\bin\$Configuration\SmartInput.VisualStudio.vsix"
-    Write-Host 'The extension was not installed, VS was not launched, and system input-method settings were not changed.'
+    & (Join-Path $PSScriptRoot 'tools\Verify-LegacyPackage.ps1') -Configuration $Configuration
+    Write-Host ""
+    Write-Host "Build succeeded."
+    Write-Host "  Visual Studio 2022/2026 + SSMS 22 (2025, x64): src\SmartInput.VisualStudio\bin\$Configuration\SmartInput.VisualStudio.vsix"
+    Write-Host "  SSMS 18/19/20 (32-bit) flat payload          : src\SmartInput.Ssms.Legacy\bin\$Configuration\"
+    Write-Host "Deploy (run as administrator):"
+    Write-Host "  SSMS 22       : tools\Deploy-SSMS22.ps1"
+    Write-Host "  SSMS 18/19/20 : tools\Deploy-SSMS-Legacy.ps1"
+    Write-Host 'The extension was not installed, VS/SSMS was not launched, and system input-method settings were not changed.'
 }
 finally { Pop-Location }
