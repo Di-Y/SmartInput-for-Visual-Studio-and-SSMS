@@ -63,7 +63,9 @@ Transact-SQL 规则（0.3.0 新增）：
 | 含汉字的单引号字符串 `'...'` / `N'...'`（可跨多行） | 中文 |
 | 字符串内的 `''` 转义引号按同一字符串处理 | 中文 / 英文随整体内容 |
 | 空字符串、纯英文字符串、仅 emoji 的字符串 | 英文 |
-| `[方括号标识符]`（含 `]]` 转义）与 `"双引号标识符"`（含 `""` 转义），即使其中是汉字 | 英文 |
+| `[方括号标识符]`（含 `]]` 转义），即使其中是汉字 | 英文 |
+| `"双引号标识符"`：`SET QUOTED_IDENTIFIER ON`（默认）时双引号界定标识符（含 `""` 转义），即使其中是汉字 | 英文 |
+| `SET QUOTED_IDENTIFIER OFF` 之后的 `"双引号字符串"`：按字符串字面量处理，含汉字推荐中文、纯英文推荐英文 | 中文 / 英文随内容 |
 | 字符串内部的 `--`、`/*` 不当作注释；括号标识符内部的引号 / `--` 不当作字符串 / 注释 | 随外层区域 |
 
 可打开仓库内的 `samples/Contexts.sql`（以及 `Contexts.cs`、`Contexts.cpp`）逐区域体验。T-SQL 没有字符字面量与字符串插值，反斜杠也不是转义符，因此单引号字符串可一直延续到闭合引号（允许跨行）。
@@ -114,7 +116,21 @@ Transact-SQL 规则（0.3.0 新增）：
 
 `tools/Verify-Package.ps1` 校验现代 VSIX，`tools/Verify-LegacyPackage.ps1` 校验 Legacy 负载（文件齐全、AnyCPU、引用程序集确为 15.x、pkgdef 与 v1 清单要素完整）。
 
+制作 GitHub Release 上传的 SSMS 安装包时，运行 `tools/Pack-Release.ps1`（先完成上面的 Release 构建），它会在 `artifacts/` 下生成两个开箱即用的压缩包：`SmartInput-SSMS22.zip`（现代 VSIX + `Deploy-SSMS22.ps1` + 安装说明）与 `SmartInput-SSMS-Legacy.zip`（Legacy 四个平铺文件 + `Deploy-SSMS-Legacy.ps1` + 安装说明）；加 `-Build` 可先自动执行一次 `build.ps1`。
+
 ## 安装与使用
+
+### 获取发布包（普通用户无需自行构建）
+
+从 GitHub 的 [Releases](https://github.com/Di-Y/SmartInput-for-Visual-Studio-and-SSMS/releases) 按宿主下载对应资产：
+
+| 宿主 | 下载资产 | 安装方式 |
+| --- | --- | --- |
+| Visual Studio 2022 / 2026 | `SmartInput.VisualStudio.vsix` | 双击经 VSIX Installer 安装 |
+| SSMS 22（2025，64 位） | `SmartInput-SSMS22.zip` | 解压后用其中的 `Deploy-SSMS22.ps1` 平铺部署 |
+| SSMS 18 / 19 / 20（32 位） | `SmartInput-SSMS-Legacy.zip` | 解压后用其中的 `Deploy-SSMS-Legacy.ps1` 平铺部署 |
+
+两个 SSMS 压缩包都已把部署脚本与所需载荷放在同一目录，解压后在该目录内运行脚本即可，脚本会自动找到同目录的 VSIX / 平铺文件，无需保留源码目录结构。正式部署前可先加 `-WhatIf` 只读演练（不改动系统，也不要求管理员权限或关闭 SSMS）；脚本删除 SSMS 私有注册表缓存前，会先自动备份到缓存目录下的 `SmartInput-PrivateRegistry-Backup` 子目录。
 
 ### Visual Studio 2022 / 2026
 
@@ -125,14 +141,17 @@ Transact-SQL 规则（0.3.0 新增）：
 先完全关闭 SSMS，然后用**“以管理员身份运行”**的 PowerShell 执行：
 
 ```powershell
+# 从源码构建部署；若从 Release 的 SmartInput-SSMS22.zip 解压，则在解压目录运行 .\Deploy-SSMS22.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\Deploy-SSMS22.ps1
+# 正式执行前可先只读演练（不改动系统，也无需管理员权限或关闭 SSMS）
+powershell -ExecutionPolicy Bypass -File .\tools\Deploy-SSMS22.ps1 -WhatIf
 # 卸载
 powershell -ExecutionPolicy Bypass -File .\tools\Deploy-SSMS22.ps1 -Uninstall
 ```
 
 脚本会把现代 VSIX（本质是 zip）解压、平铺为 SSMS 22 需要的文件到
 `C:\Program Files\Microsoft SQL Server Management Studio\22\Release\Common7\IDE\Extensions\SmartInput\`，
-删除 `%LocalAppData%\Microsoft\SSMS\22.0_*\` 下的 `privateregistry.bin`（含 `.LOG1/.LOG2`）与 `ComponentModelCache`，并写入 `extensions.configurationchanged` 标记。
+删除 `%LocalAppData%\Microsoft\SSMS\22.0_*\` 下的 `privateregistry.bin`（含 `.LOG1/.LOG2`）与 `ComponentModelCache`，并写入 `extensions.configurationchanged` 标记。删除 `privateregistry.bin` 前会先把它自动备份到该缓存目录下的 `SmartInput-PrivateRegistry-Backup` 子目录（文件名带时间戳），需要时可用于恢复 Shell 布局。
 
 实机部署补充（SSMS 22，已在 22.10 上验证）：
 
@@ -151,16 +170,19 @@ powershell -ExecutionPolicy Bypass -File .\tools\Deploy-SSMS22.ps1 -SsmsIdeDir '
 
 ```powershell
 # 部署到本机检测到的所有 18/19/20 版本
+# 从源码构建用 .\tools\Deploy-SSMS-Legacy.ps1；从 Release 的 SmartInput-SSMS-Legacy.zip 解压则运行 .\Deploy-SSMS-Legacy.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\Deploy-SSMS-Legacy.ps1
 # 只装某一版（18 / 19 / 20）
 powershell -ExecutionPolicy Bypass -File .\tools\Deploy-SSMS-Legacy.ps1 -Version 20
+# 正式执行前可先只读演练（不改动系统，也无需管理员权限或关闭 SSMS）
+powershell -ExecutionPolicy Bypass -File .\tools\Deploy-SSMS-Legacy.ps1 -WhatIf
 # 卸载
 powershell -ExecutionPolicy Bypass -File .\tools\Deploy-SSMS-Legacy.ps1 -Uninstall
 ```
 
 脚本把 Legacy 负载平铺到
 `C:\Program Files (x86)\Microsoft SQL Server Management Studio {18|19|20}\Common7\IDE\Extensions\SmartInput\`，
-并清理 `%LocalAppData%\Microsoft\SQL Server Management Studio\{版本}.0_IsoShell\` 下的私有注册表与 MEF 缓存。SSMS 只扫描 Program Files 下的全局扩展目录，不扫描当前用户目录。
+并清理 `%LocalAppData%\Microsoft\SQL Server Management Studio\{版本}.0_IsoShell\` 下的私有注册表与 MEF 缓存。SSMS 只扫描 Program Files 下的全局扩展目录，不扫描当前用户目录。从 Release 的 `SmartInput-SSMS-Legacy.zip` 安装时，脚本与四个载荷文件在同一解压目录，把命令中的脚本路径改为 `.\Deploy-SSMS-Legacy.ps1` 即可；删除私有注册表前同样会先自动备份到 `SmartInput-PrivateRegistry-Backup`。
 
 ### 安装后检查
 
@@ -178,7 +200,8 @@ powershell -ExecutionPolicy Bypass -File .\tools\Deploy-SSMS-Legacy.ps1 -Uninsta
 - `src/SmartInput.Ssms.Legacy`：SSMS 18/19/20 的 32 位包（VSSDK 15，net48，AnyCPU）。用 `<Compile Link>` 共享 `SmartInput.VisualStudio` 的全部源码，仅引用 VSSDK 15 程序集；`SmartInput.VisualStudio.pkgdef` 与 v1 `extension.vsixmanifest` 为手写维护。
 - `tests/SmartInput.Tests`：可直接运行的控制台测试程序，失败返回非零退出码。
 - `samples/Contexts.sql`、`Contexts.cs`、`Contexts.cpp`：编辑器交互检查样例（不参与构建）。
-- `tools/Deploy-SSMS22.ps1` / `tools/Deploy-SSMS-Legacy.ps1`：SSMS 手动部署 / 卸载与缓存清理。
+- `tools/Deploy-SSMS22.ps1` / `tools/Deploy-SSMS-Legacy.ps1`：SSMS 手动部署 / 卸载与缓存清理；支持 `-WhatIf` 只读演练，删除私有注册表前自动备份。
+- `tools/Pack-Release.ps1`：构建后收集产物，生成供 GitHub Release 上传的 `SmartInput-SSMS22.zip` 与 `SmartInput-SSMS-Legacy.zip`。
 - `tools/Verify-Package.ps1` / `tools/Verify-LegacyPackage.ps1`：分别校验现代 VSIX 与 Legacy 负载，不加载或安装扩展。
 - `docs/MANUAL-TESTS.md`：安装前提、实机验证步骤和回归项目。
 - `docs/VALIDATION.md`：验证结果、兼容性和已知边界。
@@ -187,11 +210,11 @@ powershell -ExecutionPolicy Bypass -File .\tools\Deploy-SSMS-Legacy.ps1 -Uninsta
 - `tools/Inspect-Pinyin.ps1`、`tools/Inspect-InputMethods.ps1`：Windows PowerShell 5.1 下的只读检查，不执行输入态切换。
 - `docs/CARET-FIX.md`：手动覆盖光标装饰层的技术原因、实现方式和验证边界。
 
-后台词法扫描器负责引号、注释和插值的边界分析，VS 语法分类辅助排除非活动代码；它不是完整编译器。T-SQL 部分覆盖注释、单引号字符串与括号 / 双引号标识符的常见写法；非常见的宿主专有语法仍可能存在识别偏差。分类信息尚未更新时，可能暂时按词法结果判断。
+后台词法扫描器负责引号、注释和插值的边界分析，VS 语法分类辅助排除非活动代码；它不是完整编译器。T-SQL 部分覆盖注释、单引号字符串、括号标识符与双引号定界内容的常见写法；双引号按文本中出现的 `SET QUOTED_IDENTIFIER ON/OFF` 顺序判定（默认 ON：双引号为标识符；OFF：双引号为字符串）。由于 `QUOTED_IDENTIFIER` 本质是连接 / 批处理 / 运行时设置，存储过程、触发器内或跨 `GO` 批处理中由运行时决定、静态文本无法确定的取值，仍按默认 ON 处理；非常见的宿主专有语法也可能存在识别偏差。分类信息尚未更新时，可能暂时按词法结果判断。
 
 ## 兼容性与已知限制
 
-截至 0.3.1，**138 项自动化测试仍全部通过**（0.3.0 在 0.2.1 的 104 项基础上新增 34 项 T-SQL 用例），包含三语言随机文本边界安全、Profile 匹配、23 项光标绘制与生命周期检查，以及离屏 WPF 渲染的颜色像素检查。现代 VSIX 与 Legacy 负载的结构、目标版本、依赖隔离、AnyCPU / VSSDK 15 绑定均通过脚本校验。
+截至 0.3.1，**143 项自动化测试全部通过**（0.3.0 在 0.2.1 的 104 项基础上新增 34 项 T-SQL 用例；0.3.1 评审修订再补 5 项 `SET QUOTED_IDENTIFIER ON/OFF` 用例），包含三语言随机文本边界安全、Profile 匹配、23 项光标绘制与生命周期检查，以及离屏 WPF 渲染的颜色像素检查。现代 VSIX 与 Legacy 负载的结构、目标版本、依赖隔离、AnyCPU / VSSDK 15 绑定均通过脚本校验。
 
 需要如实说明的验证边界：
 
@@ -221,7 +244,7 @@ Windows 的输入态可能受“每个应用窗口使用不同输入法”等系
 
 1. 在 GitHub 上通过 Issue 反馈缺陷或提出功能建议，并附上系统版本、Visual Studio / SSMS 版本、扩展版本、输入法版本、复现步骤与实际表现（请勿上传私人源码、候选词或完整按键记录）。
 2. Fork 仓库后在独立分支修改，通过 Pull Request 提交，并在描述中说明动机、改动点与验证方式。
-3. 改动请遵循“只解决目标问题、不改变既有交互语义”的原则；提交前在仓库根目录运行 `.\build.ps1`，确保 **138 项自动化测试**与 `tools\Verify-Package.ps1`、`tools\Verify-LegacyPackage.ps1` 双包校验全部通过。
+3. 改动请遵循“只解决目标问题、不改变既有交互语义”的原则；提交前在仓库根目录运行 `.\build.ps1`，确保 **143 项自动化测试**与 `tools\Verify-Package.ps1`、`tools\Verify-LegacyPackage.ps1` 双包校验全部通过。
 4. 不要提交 `.packages`、`bin`、`obj`、`.vs` 等 NuGet 还原或构建产物；新增第三方依赖时须注明来源与许可证。
 5. 始终遵守本项目的本地与隐私边界：不联网、不采集源码或按键、不自动替换标点（详见 `docs/PRIVACY.md`）。
 

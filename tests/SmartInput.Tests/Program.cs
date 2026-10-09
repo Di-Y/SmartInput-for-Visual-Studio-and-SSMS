@@ -126,6 +126,11 @@ namespace SmartInput.Tests
             Sql("SQL方括号转义", "[a]]b] ¦FROM t", ContextKind.Code, InputMode.English);
             Sql("SQL双引号标识符", "SELECT \"列¦名\" FROM t", ContextKind.Code, InputMode.English);
             Sql("SQL双引号内横线", "\"a-- ¦b\"", ContextKind.Code, InputMode.English);
+            Sql("SQL QUOTED_IDENTIFIER OFF双引号字符串中文", "SET QUOTED_IDENTIFIER OFF; SELECT \"中¦文\";", ContextKind.String, InputMode.Chinese);
+            Sql("SQL QUOTED_IDENTIFIER OFF双引号英文", "SET QUOTED_IDENTIFIER OFF; SELECT \"ab¦c\";", ContextKind.String, InputMode.English);
+            Sql("SQL QUOTED_IDENTIFIER OFF双引号内横线", "SET QUOTED_IDENTIFIER OFF; SELECT \"a-- ¦b\";", ContextKind.String, InputMode.English);
+            Sql("SQL QUOTED_IDENTIFIER OFF后重新ON为标识符", "SET QUOTED_IDENTIFIER OFF; SELECT \"中文\"; SET QUOTED_IDENTIFIER ON; SELECT \"列¦名\";", ContextKind.Code, InputMode.English);
+            Sql("SQL小写set quoted_identifier识别", "set quoted_identifier off; select \"中¦文\";", ContextKind.String, InputMode.Chinese);
             Sql("SQL括号后字符串中文", "[t] SET @s = '加¦载'", ContextKind.String, InputMode.Chinese);
             Sql("SQL仅emoji字符串", "'😀¦'", ContextKind.String, InputMode.English);
             Sql("SQL扩展区汉字", "'\U00020000¦'", ContextKind.String, InputMode.Chinese);

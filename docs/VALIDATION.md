@@ -1,6 +1,6 @@
 # 验证报告
 
-更新日期：2026-10-07（补充 SSMS 22 实机验证）。当前版本：0.3.1（工程修复版；功能、支持范围与 0.3.0 一致）。
+更新日期：2026-10-09（补充 PR 评审修订验证）。当前版本：0.3.1（工程修复 + 发布 / 部署完善；T-SQL 双引号新增对 `SET QUOTED_IDENTIFIER OFF` 的支持，其余功能、支持范围与 0.3.0 一致）。
 
 ## 0.3.1 结果摘要
 
@@ -12,10 +12,15 @@
   - 将包还原到与仓库 `.packages` 完全无关的全新全局文件夹、删除 bin/obj 重新还原后再做设计时构建，21 个 Visual Studio 引用仍全部正确解析、关键程序集（Shell.15.0 / Utilities / Interop / Text.UI.Wpf / Threading / Shell.Framework）齐全，证明结果与 NuGet 包还原位置无关。
   - 移除 pkgdef 兜底 target 后，CreatePkgDef 仍正常完成、VSIX 正常生成，说明正规包闭包已提供 pkgdef 反射所需的全部宿主程序集。
 - 程序集版本统一（消除 MSB3277）：VSSDK 17.14 的 Shell / Utilities / Imaging / Threading 与 System.Text.Json 9.0 闭包要求 `Microsoft.Bcl.AsyncInterfaces 9.0.0`，工程此前显式钉 8.0.0，导致 NuGet 主引用 8.0.0 与宿主 PublicAssemblies / 传递包统一到的 9.0.0.0 冲突。已将显式引用对齐到 9.0.0（`ExcludeAssets=runtime`）；命令行 Rebuild（`/v:normal`）与 IDE 设计时构建均不再出现 MSB3277。该程序集仅为传递依赖、本扩展不直接引用，且不拷入 VSIX（运行时由 VS 2022 17.14 / SSMS 22 宿主提供 9.0.0.0），VSIX 仍为 8 个条目。
-- Release 干净重建 0 错误；**138 项自动化测试仍全部通过**；`Verify-Package.ps1` / `Verify-LegacyPackage.ps1` 均通过。现代 VSIX 仍为 8 个条目、不捆绑任何宿主 DLL；现代 `SmartInput.VisualStudio.dll` 经 PE / COR20 头核对为 AnyCPU (ILOnly)，绑定 VSSDK 17（Shell / Text / Utilities 等为 17.0.0.0，Threading 为 17.14.0.0）；Legacy 负载仍为 ILOnly / AnyCPU、引用程序集全部绑定 VSSDK 15。
-- 已在“无 .NET SDK”条件下复现：从 PATH 移除 dotnet、清空 `MSBuildSDKsPath` / `DOTNET_ROOT`、清空各工程 bin/obj 后运行 `build.ps1 -Configuration Release`，Restore → 四工程构建 → 138 项测试 → 现代 VSIX 与 Legacy 负载双校验全部通过。
+- Release 干净重建 0 错误；**143 项自动化测试全部通过（含 5 项 SET QUOTED_IDENTIFIER ON/OFF 用例）**；`Verify-Package.ps1` / `Verify-LegacyPackage.ps1` 均通过。现代 VSIX 仍为 8 个条目、不捆绑任何宿主 DLL；现代 `SmartInput.VisualStudio.dll` 经 PE / COR20 头核对为 AnyCPU (ILOnly)，绑定 VSSDK 17（Shell / Text / Utilities 等为 17.0.0.0，Threading 为 17.14.0.0）；Legacy 负载仍为 ILOnly / AnyCPU、引用程序集全部绑定 VSSDK 15。
+- 已在“无 .NET SDK”条件下复现：从 PATH 移除 dotnet、清空 `MSBuildSDKsPath` / `DOTNET_ROOT`、清空各工程 bin/obj 后运行 `build.ps1 -Configuration Release`，Restore → 四工程构建 → 143 项测试 → 现代 VSIX 与 Legacy 负载双校验全部通过。
 - 版本号统一为 0.3.1（现代 VSIX Identity、Legacy 清单与 pkgdef、两个程序集版本、`InstalledProductRegistration`、文档）。
 - SSMS 22 已在 0.3.1 阶段完成首轮实机验证（2026-10-07，SSMS 22.10.12210.168 / x64 + 搜狗拼音）：部署、MEF 加载、菜单命令、状态栏、T-SQL 上下文识别，以及搜狗拼音的中英文**自动切换与手动 Shift 切换均通过**；微软拼音（未单独测）与 SSMS 18/19/20 仍待实测。详见下文“SSMS 22 实机验证记录”与 `MANUAL-TESTS.md`。
+- PR 评审修订（2026-10-09）已在本机 Release 构建与脚本演练中验证：
+  - `build.ps1 -Configuration Release` 干净跑通（VS 2026 MSBuild + NuGet 还原，未使用 dotnet / .NET SDK 命令）；**143 项测试 0 失败**，测试程序确为 `tests/SmartInput.Tests/bin/Release/SmartInput.Tests.exe`（Release 配置），已无“取目录中最新 exe”兜底；现代 VSIX（8 条目）与 Legacy 负载（AnyCPU / VSSDK 15）双校验通过。
+  - `tools/Pack-Release.ps1` 生成 `artifacts/SmartInput-SSMS22.zip`（3 条目：VSIX、部署脚本、安装说明）与 `artifacts/SmartInput-SSMS-Legacy.zip`（6 条目：四个平铺文件、部署脚本、安装说明），条目齐全。
+  - `Deploy-SSMS22.ps1 -WhatIf`（本机 D 盘自定义 SSMS 22 安装）实测：备份、删除私有注册表 / MEF 缓存、写信号、平铺扩展均只打印 `WhatIf:` 而不执行；运行前后 `privateregistry.bin`、`ComponentModelCache`、扩展目录与信号文件的大小 / 时间戳完全不变，也未创建备份目录；非管理员、SSMS 开启状态下即可演练。`Deploy-SSMS-Legacy.ps1 -WhatIf` 在未安装 18/19/20 时优雅退出（退出码 0）。
+  - 将发布 zip 解压到临时目录、不传载荷路径运行部署脚本，确认同目录 VSIX / 平铺文件自动回退定位生效。
 
 ## 0.3.0 结果摘要
 
@@ -91,7 +96,7 @@
 
 ## 版本历史
 
-- 0.3.1：工程修复版，功能与 0.3.0 一致；现代工程的 Visual Studio 引用全部改为官方 VSSDK 17 NuGet `PackageReference`（删除写死 `.packages` 的 VSSDK.BuildTools 内部 HintPath），从根本上消除 IDE 设计时命名空间报红，并验证与 NuGet 包还原位置无关；另将 `Microsoft.Bcl.AsyncInterfaces` 对齐到 VSSDK 17.14 闭包 / 宿主要求的 9.0.0，消除 MSB3277；138 项测试与双包校验仍通过。另于 2026-10-07 完成 SSMS 22 首轮实机：部署、加载、菜单、状态栏、T-SQL 上下文识别，以及搜狗拼音自动 / 手动切换均通过；微软拼音（未单独测）与 SSMS 18/19/20 待实测。
+- 0.3.1：工程修复版，功能与 0.3.0 一致；现代工程的 Visual Studio 引用全部改为官方 VSSDK 17 NuGet `PackageReference`（删除写死 `.packages` 的 VSSDK.BuildTools 内部 HintPath），从根本上消除 IDE 设计时命名空间报红，并验证与 NuGet 包还原位置无关；另将 `Microsoft.Bcl.AsyncInterfaces` 对齐到 VSSDK 17.14 闭包 / 宿主要求的 9.0.0，消除 MSB3277；138 项测试与双包校验仍通过。另于 2026-10-07 完成 SSMS 22 首轮实机：部署、加载、菜单、状态栏、T-SQL 上下文识别，以及搜狗拼音自动 / 手动切换均通过；微软拼音（未单独测）与 SSMS 18/19/20 待实测。2026-10-09 另按 PR 评审意见完成：发布两个 SSMS 安装载荷 zip（新增 `tools/Pack-Release.ps1`）、部署脚本 `-WhatIf` 全只读且删除私有注册表前自动备份、Release 测试改回 `Release|x86` 并使用精确路径（去除“最新 exe”兜底）、T-SQL 双引号支持 `SET QUOTED_IDENTIFIER OFF`（自动化测试由 138 增至 143 项）。
 - 0.3.0：新增 Transact-SQL 词法与 SSMS 18/19/20/22 双包支持；138 项自动化测试与双包结构校验通过；SSMS 实机验证待补。
 - 0.2.1：修复搜狗输入法实际输入态与状态栏不一致，以及状态确认失败后无法自动恢复的问题。
 - 0.2.0：加入搜狗拼音适配，并完成当前支持范围内的平台和实机验证。

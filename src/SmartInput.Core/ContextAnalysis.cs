@@ -66,6 +66,11 @@ namespace SmartInput.Core
         private readonly CancellationToken cancellation;
         private readonly List<InputContext> regions = new List<InputContext>();
 
+        // QUOTED_IDENTIFIER defaults to ON in SQL Server / SSMS. It is a connection/batch setting,
+        // so the lexer approximates it by honoring the last "SET QUOTED_IDENTIFIER ON|OFF" seen in
+        // the text. Runtime / in-procedure settings that cannot be seen statically stay at ON.
+        private bool sqlQuotedIdentifierOn = true;
+
         private ContextAnalyzer(string text, SourceLanguage language, CancellationToken cancellation)
         {
             this.text = text ?? throw new ArgumentNullException(nameof(text));
@@ -247,13 +252,66 @@ namespace SmartInput.Core
         // single-quoted strings can recommend Chinese. Backslash is not an escape character.
         private void ScanSqlChunk(ref int i)
         {
+            if (TryDetectQuotedIdentifierSetting(ref i)) return;
             if (Starts(i, "--")) { ScanSqlLineComment(ref i); return; }
             if (Starts(i, "/*")) { ScanSqlBlockComment(ref i); return; }
             char c = text[i];
             if (c == '\'') { ScanSqlString(ref i); return; }
             if (c == '[') { ScanSqlBracketIdentifier(ref i); return; }
-            if (c == '"') { ScanSqlQuotedIdentifier(ref i); return; }
+            if (c == '"')
+            {
+                // ON (default): double quotes delimit identifiers (English). OFF: they delimit
+                // string literals, so a quoted run with Chinese text recommends Chinese.
+                if (sqlQuotedIdentifierOn) ScanSqlQuotedIdentifier(ref i);
+                else ScanSqlQuotedString(ref i);
+                return;
+            }
             i++;
+        }
+
+        // Detects a standalone "SET QUOTED_IDENTIFIER ON|OFF" at a code token boundary and updates
+        // the lexer state. Only reached in code (comments/strings/bracketed identifiers are consumed
+        // wholesale by their own scanners), so it never fires inside text.
+        private bool TryDetectQuotedIdentifierSetting(ref int i)
+        {
+            int p = i;
+            if (p > 0 && IsSqlIdentChar(text[p - 1])) return false;
+            if (!WordMatchesAt(p, "set", out int afterSet)) return false;
+            if (afterSet < text.Length && IsSqlIdentChar(text[afterSet])) return false;
+            p = SkipSqlWhitespace(afterSet);
+            if (!WordMatchesAt(p, "quoted_identifier", out int afterName)) return false;
+            if (afterName < text.Length && IsSqlIdentChar(text[afterName])) return false;
+            p = SkipSqlWhitespace(afterName);
+            bool turnOn;
+            int afterValue;
+            if (WordMatchesAt(p, "on", out afterValue)) turnOn = true;
+            else if (WordMatchesAt(p, "off", out afterValue)) turnOn = false;
+            else return false;
+            if (afterValue < text.Length && IsSqlIdentChar(text[afterValue])) return false;
+            sqlQuotedIdentifierOn = turnOn;
+            i = afterValue;
+            return true;
+        }
+
+        private int SkipSqlWhitespace(int p)
+        {
+            while (p < text.Length && (text[p] == ' ' || text[p] == '\t' || text[p] == '\r' || text[p] == '\n')) p++;
+            return p;
+        }
+
+        private static bool IsSqlIdentChar(char c) =>
+            char.IsLetterOrDigit(c) || c == '_' || c == '@' || c == '#' || c == '$';
+
+        // Case-insensitive ordinal match of an ASCII keyword; reports the index just past it.
+        private bool WordMatchesAt(int p, string word, out int after)
+        {
+            after = p + word.Length;
+            if (after > text.Length) return false;
+            for (int k = 0; k < word.Length; k++)
+            {
+                if (char.ToLowerInvariant(text[p + k]) != char.ToLowerInvariant(word[k])) return false;
+            }
+            return true;
         }
 
         private void ScanSqlLineComment(ref int i)
@@ -337,6 +395,26 @@ namespace SmartInput.Core
                 }
                 i++;
             }
+        }
+
+        private void ScanSqlQuotedString(ref int i)
+        {
+            // With QUOTED_IDENTIFIER OFF double quotes delimit string literals ("" is an escaped
+            // quote). Literals may span multiple lines; Add() decides Chinese from their content.
+            int start = ++i;
+            while (i < text.Length)
+            {
+                CheckCancellation(i);
+                if (text[i] == '"')
+                {
+                    if (i + 1 < text.Length && text[i + 1] == '"') { i += 2; continue; }
+                    Add(ContextKind.String, start, i);
+                    i++;
+                    return;
+                }
+                i++;
+            }
+            Add(ContextKind.String, start, i);
         }
 
         private bool IsDigitSeparator(int i)

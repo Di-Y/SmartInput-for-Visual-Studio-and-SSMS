@@ -1,6 +1,6 @@
 # 实机回归清单
 
-适用于 Smart Input 0.3.1 及后续版本。0.3.1 为工程修复版，功能与 0.3.0 一致；0.3.0 在 0.2.1 的 Visual Studio 能力之上新增 Transact-SQL 与 SSMS 支持；自动化测试（138 项）与双包结构校验已通过。**SSMS 22 已于 2026-10-07 完成首轮实机（部署、加载、菜单、状态栏、T-SQL 上下文识别，以及搜狗拼音自动 / 手动切换均通过，详见下文验证矩阵与 `docs/VALIDATION.md`）；SSMS 22 + 微软拼音以及 SSMS 18/19/20 仍需在装有对应环境的机器上按本清单实测。**
+适用于 Smart Input 0.3.1 及后续版本。0.3.1 在工程修复之外，按 PR 评审意见补齐了 SSMS 发布载荷、部署脚本安全（`-WhatIf` 只读、删除私有注册表前自动备份）与 Release 测试配置，并让 T-SQL 双引号遵循 `SET QUOTED_IDENTIFIER`（新增 OFF 时按字符串处理）；0.3.0 在 0.2.1 的 Visual Studio 能力之上新增 Transact-SQL 与 SSMS 支持；自动化测试（143 项）与双包结构校验已通过。**SSMS 22 已于 2026-10-07 完成首轮实机（部署、加载、菜单、状态栏、T-SQL 上下文识别，以及搜狗拼音自动 / 手动切换均通过，详见下文验证矩阵与 `docs/VALIDATION.md`）；SSMS 22 + 微软拼音以及 SSMS 18/19/20 仍需在装有对应环境的机器上按本清单实测。**
 
 ## 安装之前
 
@@ -31,15 +31,16 @@
 
 ## SSMS 部署检查（0.3.0 新增）
 
-1. 先运行 `.\build.ps1` 完成双包构建。
-2. 完全关闭 SSMS（任务管理器确认无 `Ssms.exe`）。
-3. 以管理员 PowerShell 运行对应脚本：
-   - SSMS 22：`tools\Deploy-SSMS22.ps1`。
-   - SSMS 18/19/20：`tools\Deploy-SSMS-Legacy.ps1`（可加 `-Version 20`）。
-4. 确认脚本输出的目标目录下文件已平铺（SSMS 22 为 6 个文件含 `manifest.json`、`catalog.json`；SSMS 18-20 为 4 个文件）。
-5. 启动 SSMS；若未加载，用 `Ssms.exe -log` 启动并查看 `%AppData%\Microsoft\SSMS\<版本>\ActivityLog.xml` 是否有 SmartInput / 程序集加载错误。
-6. 卸载验证：`-Uninstall` 后重启 SSMS，扩展与状态栏应消失。
-7. 注意不要把现代包装进 SSMS 18-20，也不要把 Legacy 包装进 SSMS 22 / Visual Studio，否则会出现“包未正确加载”。
+1. 普通用户可直接从 GitHub Release 下载 `SmartInput-SSMS22.zip` / `SmartInput-SSMS-Legacy.zip` 并解压；从源码验证则先运行 `.\build.ps1` 完成双包构建（需要时再用 `tools\Pack-Release.ps1` 生成上述两个 zip）。
+2. 建议先加 `-WhatIf` 只读演练（无需管理员、无需关闭 SSMS，不改动系统），确认目标目录与将要删除 / 备份的缓存无误，例如 `powershell -ExecutionPolicy Bypass -File .\Deploy-SSMS22.ps1 -WhatIf`（Release zip 解压目录下脚本名为 `.\Deploy-SSMS22.ps1`，源码树为 `.\tools\Deploy-SSMS22.ps1`）。
+3. 完全关闭 SSMS（任务管理器确认无 `Ssms.exe`）。
+4. 以管理员 PowerShell 运行对应脚本：
+   - SSMS 22：`tools\Deploy-SSMS22.ps1`（Release zip 解压目录为 `.\Deploy-SSMS22.ps1`）。
+   - SSMS 18/19/20：`tools\Deploy-SSMS-Legacy.ps1`（可加 `-Version 20`；Release zip 解压目录为 `.\Deploy-SSMS-Legacy.ps1`）。
+5. 确认脚本输出包含“已备份私有注册表：...SmartInput-PrivateRegistry-Backup\privateregistry.<时间戳>.bin”，且目标目录下文件已平铺（SSMS 22 为 6 个文件含 `manifest.json`、`catalog.json`；SSMS 18-20 为 4 个文件）。
+6. 启动 SSMS；若未加载，用 `Ssms.exe -log` 启动并查看 `%AppData%\Microsoft\SSMS\<版本>\ActivityLog.xml` 是否有 SmartInput / 程序集加载错误。
+7. 卸载验证：`-Uninstall` 后重启 SSMS，扩展与状态栏应消失。
+8. 注意不要把现代包装进 SSMS 18-20，也不要把 Legacy 包装进 SSMS 22 / Visual Studio，否则会出现“包未正确加载”。
 
 ## T-SQL / SQL 编辑器场景（0.3.0 新增）
 
@@ -48,6 +49,8 @@
 - 普通 `SELECT ... FROM ...`、表名 / 列名、负数 `= -1`：英文。
 - `[订单表]`、`"Customer"` 等括号 / 双引号标识符，即使内部是汉字：英文。
 - `[a]]b]`、`"a""b"` 转义标识符：英文；标识符内部的 `'`、`--` 不触发字符串 / 注释。
+- `SET QUOTED_IDENTIFIER ON`（默认）下 `"Customer"`、`"列名"` 等双引号标识符即使含汉字：英文。
+- `SET QUOTED_IDENTIFIER OFF;` 之后 `SELECT "中文";` 双引号界定字符串：含汉字切中文、纯英文切英文；其内 `--` 不当注释、`""` 为转义引号；再次 `SET QUOTED_IDENTIFIER ON;` 后双引号恢复为标识符（英文）。
 - `-- 查询用户`：进入注释即中文；注释换行写 `SELECT` 恢复英文。
 - `/* 中文 */` 块注释中文；嵌套 `/* outer /* inner */ still */` 在外层闭合前都为中文，闭合后恢复英文。
 - `N'已支付'`、`'查询用户'`：含汉字字符串中文；`'pending'`、空串 `''`、`'😀'`：英文。
