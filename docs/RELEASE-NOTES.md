@@ -2,6 +2,29 @@
 
 作者：**我在人间做废物**
 
+## 0.3.2
+
+状态：Pull Request 评审修复版。针对 0.3.1 Pull Request 的自动化评审意见，在不改变既有交互语义的前提下完成**四项修复**（补齐发布载荷、部署脚本 `-WhatIf` 安全与私有注册表备份、Release 测试配置与定位、T-SQL 双引号遵循 `SET QUOTED_IDENTIFIER`），并补齐可直接交付最终用户的发布载荷；自动化测试由 0.3.1 的 138 项增至 **143 项**。版本号同步统一为 0.3.2（现代 VSIX Identity、Legacy `extension.vsixmanifest` 与手写 `.pkgdef`、`SmartInput.Core` / `SmartInput.VisualStudio` 程序集版本、`InstalledProductRegistration`）。
+
+### 修复
+
+- **发布载荷补齐（P1）**：新增 `tools/Pack-Release.ps1`，构建后一键生成两个可直接交付最终用户、互不依赖的压缩包：`SmartInput-SSMS22.zip`（现代 VSIX + `Deploy-SSMS22.ps1` + 安装说明）与 `SmartInput-SSMS-Legacy.zip`（Legacy 四个平铺文件 + `Deploy-SSMS-Legacy.ps1` + 安装说明）。两个包内脚本与载荷同目录，解压后即在该目录运行，脚本会自动回退定位同目录的 VSIX / 平铺文件，无需保留源码目录结构。
+- **部署脚本 `-WhatIf` 安全与私有注册表自动备份（P1）**：`Deploy-SSMS22.ps1`、`Deploy-SSMS-Legacy.ps1` 中清理私有注册表 / MEF 缓存、写入 `extensions.configurationchanged` 的所有删除 / 写入操作全部纳入 `$PSCmdlet.ShouldProcess`；`-WhatIf` 时完全只读（实测不删除任何缓存 / 注册表、不生成备份、不改扩展目录），且无需管理员权限或关闭 SSMS。删除 `privateregistry.bin` 前先自动备份到缓存目录下 `SmartInput-PrivateRegistry-Backup\privateregistry.<时间戳>.bin`；删除 / 写入失败直接抛错，不再在 `-ErrorAction SilentlyContinue` 之后仍无条件报告“部署完成”；未检测到 SSMS 安装时 `-WhatIf` 优雅退出。
+- **Release 测试配置与定位修正（P2）**：解决方案中 Tests 工程在 Release 解决方案配置下由原来的 `Debug|x86` 改为 `Release|x86`（Debug 解决方案仍为 `Debug|x86`）；`build.ps1` 只运行本次配置精确路径 `tests/SmartInput.Tests/bin/<配置>/SmartInput.Tests.exe`，删除“递归取目录中时间最新 exe”的兜底，避免误跑陈旧产物；已实测 Release 构建运行的是 `bin/Release/SmartInput.Tests.exe`，发布 DLL 仍为 AnyCPU (ILOnly)、无 `Required32Bit`。
+- **T-SQL 双引号遵循 `QUOTED_IDENTIFIER`（P2）**：词法器默认 `QUOTED_IDENTIFIER ON`（双引号为标识符、推荐英文），并按文本中 `SET QUOTED_IDENTIFIER ON/OFF` 的出现顺序更新状态；`OFF` 时双引号界定字符串字面量，含汉字推荐中文、纯英文推荐英文，`""` 作为转义引号。存储过程 / 触发器内或跨 `GO` 批处理等运行时才确定、静态文本无法判定的取值按默认 ON 处理，已列入已知限制；新增 5 项自动化用例，测试总数由 138 增至 143。
+
+### 发布资产
+
+由 `tools/Pack-Release.ps1` 生成（GitHub Release 0.3.2）：
+
+- `SmartInput.VisualStudio.vsix`：Visual Studio 2022 / 2026 双击安装。
+- `SmartInput-SSMS22.zip`：SSMS 22（2025，64 位），含现代 VSIX 与 `Deploy-SSMS22.ps1`。
+- `SmartInput-SSMS-Legacy.zip`：SSMS 18 / 19 / 20（32 位），含四个平铺文件与 `Deploy-SSMS-Legacy.ps1`。
+
+### 验证
+
+Release 干净重建 0 错误，**143 项自动化测试全部通过**；现代 VSIX（版本 0.3.2，8 个条目）与 Legacy 负载（AnyCPU / VSSDK 15，4 个文件）双校验通过，程序集文件版本与 VSIX 版本一致为 0.3.2。功能、交互与 SSMS 实机结论同 0.3.1。
+
 ## 0.3.1
 
 状态：工程修复版。不新增功能，不改变支持范围与交互规则；修复在 Visual Studio 中打开解决方案时，多个 `Microsoft.VisualStudio.*` 命名空间（Shell / Utilities / Text / Threading 等）在 IDE 设计时（智能提示 / 错误列表）报“类型或命名空间不存在”的问题。
@@ -29,18 +52,9 @@ SHA256：构建完成后以本地 `tools/Verify-Package.ps1`、`tools/Verify-Leg
 - 改用正规 NuGet 包闭包后，现代工程的 Visual Studio 引用在设计时与命令行完全一致，且不再依赖 VSSDK.BuildTools 的内部目录或仓库 `.packages` 的固定位置；干净构建不再出现此前 Shell 同代深层程序集（Utilities、ComponentModelHost、Imaging、ImageCatalog、StreamJsonRpc 等）未解析的提示。
 - 现代 VSIX 仍为 8 个条目，不捆绑任何宿主程序集（所有 VS 引用程序集均不拷入输出 / VSIX）；现代 DLL 为 AnyCPU (ILOnly)、绑定 VSSDK 17（Shell / Text / Utilities 等为 17.0.0.0，Threading 为 17.14.0.0），可在 64 位 Visual Studio 2022/2026 与 SSMS 22 中加载。Legacy 负载仍为 ILOnly / AnyCPU，引用程序集全部绑定 VSSDK 15。
 
-### Pull Request 评审修订（0.3.1）
-
-针对 0.3.1 Pull Request 的自动化评审意见，在不改变既有交互语义的前提下完成以下修订：
-
-- **发布载荷补齐（P1）**：新增 `tools/Pack-Release.ps1`，构建后一键生成两个可直接交付最终用户、互不依赖的压缩包：`SmartInput-SSMS22.zip`（现代 VSIX + `Deploy-SSMS22.ps1` + 安装说明）与 `SmartInput-SSMS-Legacy.zip`（Legacy 四个平铺文件 + `Deploy-SSMS-Legacy.ps1` + 安装说明）。两个包内脚本与载荷同目录，解压后即在该目录运行，脚本会自动回退定位同目录的 VSIX / 平铺文件，无需保留源码目录结构。GitHub Release 0.3.1 应同时上传 `SmartInput.VisualStudio.vsix`（Visual Studio 用）、`SmartInput-SSMS22.zip` 与 `SmartInput-SSMS-Legacy.zip`。
-- **部署脚本 `-WhatIf` 安全与私有注册表自动备份（P1）**：`Deploy-SSMS22.ps1`、`Deploy-SSMS-Legacy.ps1` 中清理私有注册表 / MEF 缓存、写入 `extensions.configurationchanged` 的所有删除 / 写入操作全部纳入 `$PSCmdlet.ShouldProcess`；`-WhatIf` 时完全只读（实测不删除任何缓存 / 注册表、不生成备份、不改扩展目录），且无需管理员权限或关闭 SSMS。删除 `privateregistry.bin` 前先自动备份到缓存目录下 `SmartInput-PrivateRegistry-Backup\privateregistry.<时间戳>.bin`；删除 / 写入失败直接抛错，不再在 `-ErrorAction SilentlyContinue` 之后仍无条件报告“部署完成”；未检测到 SSMS 安装时 `-WhatIf` 优雅退出。
-- **Release 测试配置与定位修正（P2）**：解决方案中 Tests 工程在 Release 解决方案配置下由原来的 `Debug|x86` 改为 `Release|x86`（Debug 解决方案仍为 `Debug|x86`）；`build.ps1` 只运行本次配置精确路径 `tests/SmartInput.Tests/bin/<配置>/SmartInput.Tests.exe`，删除“递归取目录中时间最新 exe”的兜底，避免误跑陈旧产物。已实测 Release 构建运行的是 `bin/Release/SmartInput.Tests.exe`。发布 DLL 经核对仍为 AnyCPU (ILOnly)，无 `Required32Bit`。
-- **T-SQL 双引号遵循 `QUOTED_IDENTIFIER`（P2）**：词法器默认 `QUOTED_IDENTIFIER ON`（双引号为标识符、推荐英文），并按文本中 `SET QUOTED_IDENTIFIER ON/OFF` 的出现顺序更新状态；`OFF` 时双引号界定字符串字面量，含汉字推荐中文、纯英文推荐英文，`""` 作为转义引号。存储过程 / 触发器内或跨 `GO` 批处理等运行时才确定、静态文本无法判定的取值按默认 ON 处理，已列入已知限制；新增 5 项自动化用例。
-
 ### 验证与已知边界
 
-- Release 干净重建 0 错误，**143 项自动化测试全部通过**（在 0.3.0 的 138 项基础上，于本版 PR 评审修订中新增 5 项 `SET QUOTED_IDENTIFIER ON/OFF` 用例）；`Verify-Package.ps1` 与 `Verify-LegacyPackage.ps1` 均通过，程序集文件版本与 VSIX 版本一致为 0.3.1。
+- Release 干净重建 0 错误，**138 项自动化测试全部通过**（与 0.3.0 相同；本版为工程修复，不新增功能与用例。四项 Pull Request 评审修复及新增的 5 项 `SET QUOTED_IDENTIFIER ON/OFF` 用例在 0.3.2 中提供）；`Verify-Package.ps1` 与 `Verify-LegacyPackage.ps1` 均通过，程序集文件版本与 VSIX 版本一致为 0.3.1。
 - 额外完成两项工程级验证：① 以设计时构建（`DesignTimeBuild`）枚举 IDE 实际引用路径，Shell / Utilities / Interop / Text / Threading 等全套程序集均来自正规 NuGet 包，无一条 VSSDK.BuildTools 内部 HintPath；② 将包还原到与仓库 `.packages` 完全无关的全新全局文件夹、删除 bin/obj 重新还原后再做设计时构建，21 个 Visual Studio 引用仍全部正确解析，证明结果与还原位置无关。
 - 在未安装 .NET SDK、仅 VS 2022 MSBuild + NuGet 还原的环境下完整跑通 Restore → Build → 测试 → 双校验。
 - 0.3.1 阶段已在 SSMS 22（22.10.12210.168 / x64）完成首轮实机验证：手动部署、MEF 加载、`工具` 菜单命令、左下角状态栏、T-SQL 代码 / 注释上下文识别均通过、无崩溃；**SSMS 22 + 搜狗拼音下，移动光标自动中英文切换与手动 Shift 切换 / 手动覆盖均经物理键盘实测通过**；SSMS 22 + 微软拼音（未单独测）以及 SSMS 18/19/20 仍待实测。详见 `docs/VALIDATION.md` 与 `docs/MANUAL-TESTS.md`。

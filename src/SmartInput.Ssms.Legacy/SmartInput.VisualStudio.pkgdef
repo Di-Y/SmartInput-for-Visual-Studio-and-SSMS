@@ -6,7 +6,7 @@
 
 [$RootKey$\InstalledProducts\SmartInputPackage]
 @="Smart Input"
-"PID"="0.3.1"
+"PID"="0.3.2"
 "ProductDetails"="Local input-state switching for Visual Studio and SSMS"
 "Package"="{a11d90fc-8f3d-493a-a227-d7a59c26eae8}"
 

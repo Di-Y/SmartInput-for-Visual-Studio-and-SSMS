@@ -9,7 +9,7 @@
   <Identifier Id="SmartInput.Ssms.Legacy.943daace-d510-4e75-b17c-715cf0602c01">
     <Name>Smart Input for SSMS (2018-2022)</Name>
     <Author>我在人间做废物</Author>
-    <Version>0.3.1</Version>
+    <Version>0.3.2</Version>
     <Description xml:space="preserve">在 SQL Server Management Studio 18/19/20（32 位）的 Transact-SQL 编辑器中，按代码、注释与字符串上下文自动切换微软拼音 / 搜狗拼音的中英文态。代码与 [方括号]、"双引号"标识符保持英文；-- 注释、嵌套 /* */ 注释与含汉字的字符串切到中文。</Description>
     <Locale>2052</Locale>
     <SupportedProducts>

@@ -194,7 +194,7 @@ if (-not $WhatIfPreference) {
             foreach ($e in $archive.Entries) { Write-Host "      - $($e.FullName)" }
         } finally { $archive.Dispose() }
     }
-    Write-Host '请把这两个 zip 作为 GitHub Release 0.3.1 的资产上传。'
+    Write-Host '请把这两个 zip 作为 GitHub Release 0.3.2 的资产上传。'
 } else {
     Write-Host '演练完成：未生成任何压缩包。去掉 -WhatIf 重新执行以实际打包。'
 }
