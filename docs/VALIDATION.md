@@ -5,7 +5,7 @@
 ## 0.3.2 结果摘要
 
 - 0.3.2 针对 0.3.1 Pull Request 的自动化评审意见完成四项修复（不改变既有交互语义）；Release 干净重建 0 错误，**143 项自动化测试全部通过、0 失败**（在 0.3.1 的 138 项基础上新增 5 项 `SET QUOTED_IDENTIFIER ON/OFF` 用例）。
-- **发布载荷补齐（P1）**：新增 `tools/Pack-Release.ps1`，生成 `artifacts/SmartInput-SSMS22.zip`（3 条目：现代 VSIX、`Deploy-SSMS22.ps1`、安装说明）与 `artifacts/SmartInput-SSMS-Legacy.zip`（6 条目：四个平铺文件、`Deploy-SSMS-Legacy.ps1`、安装说明），普通用户下载 Release 资产后无需源码即可按包安装。
+- **发布载荷补齐（P1）**：新增 `tools/Pack-Release.ps1`，生成 `artifacts/SmartInput-SSMS22.zip`（3 条目：现代 VSIX、`Deploy-SSMS22.ps1`、安装说明）与 `artifacts/SmartInput-SSMS-Legacy.zip`（6 条目：四个平铺文件、`Deploy-SSMS-Legacy.ps1`、安装说明），普通用户下载 Release 资产后无需源码即可按包安装。另修复 `-Build` 开关误调用不存在的 `tools\build.ps1` 的路径缺陷（改为仓库根 `build.ps1`），并实测 `.\tools\Pack-Release.ps1 -Build` 端到端跑通：还原 → 四工程构建 → 143 项测试 → 现代 / Legacy 双包校验 → 生成两个发布 zip，退出码 0。
 - **部署脚本 `-WhatIf` 安全与备份（P1）**：`Deploy-SSMS22.ps1 -WhatIf`（本机 D 盘自定义 SSMS 22）实测备份、删除私有注册表 / MEF 缓存、写信号、平铺扩展均只打印 `WhatIf:` 而不执行，运行前后 `privateregistry.bin`、`ComponentModelCache`、扩展目录与信号文件大小 / 时间戳完全不变、也不创建备份目录（非管理员、SSMS 开启即可演练）；`Deploy-SSMS-Legacy.ps1 -WhatIf` 在未安装 18/19/20 时优雅退出（退出码 0）。删除 `privateregistry.bin` 前自动备份；发布 zip 解压到临时目录、不传载荷路径运行脚本，确认同目录载荷自动回退定位生效。
 - **Release 测试配置与定位（P2）**：Tests 工程 Release 解决方案配置由 `Debug|x86` 改回 `Release|x86`，`build.ps1` 只运行精确路径 `tests/SmartInput.Tests/bin/Release/SmartInput.Tests.exe`，已无“取目录中最新 exe”兜底，Release 构建运行 **143 项测试 0 失败**；发布 DLL 经核对仍为 AnyCPU (ILOnly)、无 `Required32Bit`。
 - **T-SQL 双引号遵循 `QUOTED_IDENTIFIER`（P2）**：词法器跟踪 `SET QUOTED_IDENTIFIER ON/OFF`，`OFF` 时双引号界定字符串字面量、含汉字切中文，新增 5 项用例。
