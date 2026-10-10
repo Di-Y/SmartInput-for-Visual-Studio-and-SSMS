@@ -8,7 +8,7 @@
 
 ### 修复
 
-- **发布载荷补齐（P1）**：新增 `tools/Pack-Release.ps1`，构建后一键生成两个可直接交付最终用户、互不依赖的压缩包：`SmartInput-SSMS22.zip`（现代 VSIX + `Deploy-SSMS22.ps1` + 安装说明）与 `SmartInput-SSMS-Legacy.zip`（Legacy 四个平铺文件 + `Deploy-SSMS-Legacy.ps1` + 安装说明）。两个包内脚本与载荷同目录，解压后即在该目录运行，脚本会自动回退定位同目录的 VSIX / 平铺文件，无需保留源码目录结构。
+- **发布载荷补齐（P1）**：新增 `tools/Pack-Release.ps1`，构建后一键生成两个可直接交付最终用户、互不依赖的压缩包：`SmartInput-SSMS22.zip`（现代 VSIX + `Deploy-SSMS22.ps1` + 安装说明）与 `SmartInput-SSMS-Legacy.zip`（Legacy 四个平铺文件 + `Deploy-SSMS-Legacy.ps1` + 安装说明）。两个包内脚本与载荷同目录，解压后即在该目录运行，脚本会自动回退定位同目录的 VSIX / 平铺文件，无需保留源码目录结构。另修复 `-Build` 开关误调用不存在的 `tools\build.ps1` 的路径缺陷（`$PSScriptRoot` 指向 `tools` 目录），改为调用仓库根目录的 `build.ps1`；已实测 `.\tools\Pack-Release.ps1 -Build` 可一次完成还原、构建、143 项测试、双包校验并生成两个压缩包（退出码 0）。
 - **部署脚本 `-WhatIf` 安全与私有注册表自动备份（P1）**：`Deploy-SSMS22.ps1`、`Deploy-SSMS-Legacy.ps1` 中清理私有注册表 / MEF 缓存、写入 `extensions.configurationchanged` 的所有删除 / 写入操作全部纳入 `$PSCmdlet.ShouldProcess`；`-WhatIf` 时完全只读（实测不删除任何缓存 / 注册表、不生成备份、不改扩展目录），且无需管理员权限或关闭 SSMS。删除 `privateregistry.bin` 前先自动备份到缓存目录下 `SmartInput-PrivateRegistry-Backup\privateregistry.<时间戳>.bin`；删除 / 写入失败直接抛错，不再在 `-ErrorAction SilentlyContinue` 之后仍无条件报告“部署完成”；未检测到 SSMS 安装时 `-WhatIf` 优雅退出。
 - **Release 测试配置与定位修正（P2）**：解决方案中 Tests 工程在 Release 解决方案配置下由原来的 `Debug|x86` 改为 `Release|x86`（Debug 解决方案仍为 `Debug|x86`）；`build.ps1` 只运行本次配置精确路径 `tests/SmartInput.Tests/bin/<配置>/SmartInput.Tests.exe`，删除“递归取目录中时间最新 exe”的兜底，避免误跑陈旧产物；已实测 Release 构建运行的是 `bin/Release/SmartInput.Tests.exe`，发布 DLL 仍为 AnyCPU (ILOnly)、无 `Required32Bit`。
 - **T-SQL 双引号遵循 `QUOTED_IDENTIFIER`（P2）**：词法器默认 `QUOTED_IDENTIFIER ON`（双引号为标识符、推荐英文），并按文本中 `SET QUOTED_IDENTIFIER ON/OFF` 的出现顺序更新状态；`OFF` 时双引号界定字符串字面量，含汉字推荐中文、纯英文推荐英文，`""` 作为转义引号。存储过程 / 触发器内或跨 `GO` 批处理等运行时才确定、静态文本无法判定的取值按默认 ON 处理，已列入已知限制；新增 5 项自动化用例，测试总数由 138 增至 143。
