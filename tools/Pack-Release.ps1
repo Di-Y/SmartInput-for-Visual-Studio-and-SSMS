@@ -50,8 +50,8 @@ if (-not $OutputDir) { $OutputDir = Join-Path $repoRoot 'artifacts' }
 
 if ($Build) {
     Write-Host '先运行 build.ps1 ...'
-    $buildScript = Join‑Path $repoRoot 'build.ps1'
-    & $buildScript ‑Configuration $Configuration
+    $buildScript = Join-Path $repoRoot 'build.ps1'
+    & $buildScript -Configuration $Configuration
     if ($LASTEXITCODE -ne 0) { throw "build.ps1 失败，退出码: $LASTEXITCODE" }
 }
 
