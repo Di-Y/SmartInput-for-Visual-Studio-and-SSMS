@@ -2,6 +2,30 @@
 
 作者：**我在人间做废物**
 
+## 0.3.3
+
+状态：**发布一致性修正版，无功能变更**。修复 0.3.2 的发布标签与三份资产停留在早期提交 `4f5b9e8`、未包含 `tools/Pack-Release.ps1` 打包脚本修复（U+2011 非 ASCII 连字符、`build.ps1` 根目录路径）的问题。本版本在**同一提交**上完成干净构建、打标签与发布，确保“发布标签 = 构建提交 = 三份资产”三者完全对应、可追溯。
+
+### 变更
+
+- 版本号统一为 **0.3.3**：现代 VSIX Identity、Legacy `extension.vsixmanifest` 与手写 `.pkgdef`、`SmartInput.Core` / `SmartInput.VisualStudio` 程序集版本、`InstalledProductRegistration`。
+- 打包脚本 `Pack-Release.ps1` 中 `-Build` 正确调用仓库根目录 `build.ps1`，全部参数连字符为 ASCII；已在干净检出实测 `.\tools\Pack-Release.ps1 -Build` 端到端跑通（还原 → 四工程构建 → 测试 → 双包校验 → 生成两个 zip），退出码 0。
+- 功能、交互规则与 0.3.2 完全一致，未做任何行为改动。
+
+### 发布资产与 SHA-256
+
+- `SmartInput.VisualStudio.vsix`：Visual Studio 2022 / 2026 安装。
+  `SHA256: D33D57B78060F26C7CD9D6D9E6C11D7F94B5A6ED4319C72954D25B257FD95814`
+- `SmartInput-SSMS22.zip`：SSMS 22（2025，64 位）。
+  `SHA256: 27502A0F7A21D4F5EC39F004B7AA736029819549671DD56C48A926E6A6682FD8`
+- `SmartInput-SSMS-Legacy.zip`：SSMS 18 / 19 / 20（32 位）。
+  `SHA256: 833EF74EC2E85E8D4A7AF0885B4E8113FAF9AD7CF4E211346C6310A345279B47`
+
+### 验证
+
+干净重建 0 错误，**143 项自动化测试全部通过、0 失败**；现代 VSIX（0.3.3）与 Legacy 负载双校验通过，程序集文件版本与 VSIX 版本一致为 0.3.3。
+
+---
 ## 0.3.2
 
 状态：Pull Request 评审修复版。针对 0.3.1 Pull Request 的自动化评审意见，在不改变既有交互语义的前提下完成**四项修复**（补齐发布载荷、部署脚本 `-WhatIf` 安全与私有注册表备份、Release 测试配置与定位、T-SQL 双引号遵循 `SET QUOTED_IDENTIFIER`），并补齐可直接交付最终用户的发布载荷；自动化测试由 0.3.1 的 138 项增至 **143 项**。版本号同步统一为 0.3.2（现代 VSIX Identity、Legacy `extension.vsixmanifest` 与手写 `.pkgdef`、`SmartInput.Core` / `SmartInput.VisualStudio` 程序集版本、`InstalledProductRegistration`）。

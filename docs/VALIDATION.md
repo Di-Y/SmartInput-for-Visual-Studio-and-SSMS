@@ -2,6 +2,13 @@
 
 更新日期：2026-10-09（0.3.2 版本发布）。当前版本：0.3.2（Pull Request 评审四项修复版：补齐发布载荷、部署脚本 `-WhatIf` 安全与私有注册表备份、Release 测试配置与定位、T-SQL 双引号遵循 `SET QUOTED_IDENTIFIER`，自动化测试由 138 增至 143）。0.3.1 为工程修复版，解决未安装 .NET SDK 机器上的构建问题、根治 IDE 设计时 `Microsoft.VisualStudio.*` 命名空间报红并消除 MSB3277，不新增功能、测试仍为 138；0.3.0 新增 Transact-SQL 与 SSMS 支持。
 
+## 0.3.3 结果摘要
+
+- 0.3.3 为**发布一致性修正版，无功能变更**；解决 0.3.2 发布标签与三份资产停留在早期提交 `4f5b9e8`、未包含打包脚本修复（U+2011 连字符、`build.ps1` 路径）的问题。
+- 从干净检出执行 `.\tools\Pack-Release.ps1 -Build`：还原 → 四工程构建 → **143 项自动化测试全部通过、0 失败** → 现代 / Legacy 双包校验 → 生成两个发布 zip，**退出码 0**。
+- 发布标签 0.3.3、构建提交、三份资产对应**同一提交**；版本号在现代 VSIX Identity、Legacy manifest / pkgdef、两个程序集、`InstalledProductRegistration` 统一为 0.3.3。
+- 三份资产 SHA-256 见 `docs/RELEASE-NOTES.md`（构建后回填），功能与交互同 0.3.2。
+
 ## 0.3.2 结果摘要
 
 - 0.3.2 针对 0.3.1 Pull Request 的自动化评审意见完成四项修复（不改变既有交互语义）；Release 干净重建 0 错误，**143 项自动化测试全部通过、0 失败**（在 0.3.1 的 138 项基础上新增 5 项 `SET QUOTED_IDENTIFIER ON/OFF` 用例）。
