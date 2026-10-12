@@ -39,7 +39,7 @@ namespace SmartInput.VisualStudio
         private int pendingAttempts;
         private string pendingContext;
         private string blockedContext;
-
+        
         public string Status { get; private set; } = "等待编辑器焦点";
         public event EventHandler StatusChanged;
 
@@ -71,7 +71,14 @@ namespace SmartInput.VisualStudio
 
         private bool Focused => !disposed && !view.IsClosed && view.VisualElement.IsKeyboardFocusWithin && inputMethods.IsForeground;
         private bool Composing => wpfComposition || nativeComposition;
-        private bool Supported => view.TextBuffer.ContentType.IsOfType("C/C++") || view.TextBuffer.ContentType.IsOfType("CSharp");
+        private bool Supported
+        {
+            get
+            {
+                var contentType = view.TextBuffer.ContentType;
+                return contentType.IsOfType("C/C++") || contentType.IsOfType("CSharp") || EditorLanguage.IsSql(contentType);
+            }
+        }
 
         private void OnCaretMoved(object sender, CaretPositionChangedEventArgs e) { Schedule(); }
         private void OnTextChanged(object sender, TextContentChangedEventArgs e)
@@ -352,7 +359,7 @@ namespace SmartInput.VisualStudio
             var cancellation = new CancellationTokenSource();
             analysisCancellation = cancellation;
             analyzingSnapshot = snapshot;
-            var language = view.TextBuffer.ContentType.IsOfType("CSharp") ? SourceLanguage.CSharp : SourceLanguage.Cpp;
+            var language = LanguageFor(view.TextBuffer.ContentType);
             try
             {
                 var result = await Task.Run(() => ContextAnalyzer.Analyze(snapshot.GetText(), language, cancellation.Token));
@@ -388,6 +395,13 @@ namespace SmartInput.VisualStudio
                 Schedule();
             }
             return IntPtr.Zero; // Never consume/modify the IME's messages.
+        }
+
+        private static SourceLanguage LanguageFor(Microsoft.VisualStudio.Utilities.IContentType contentType)
+        {
+            if (contentType.IsOfType("CSharp")) return SourceLanguage.CSharp;
+            if (EditorLanguage.IsSql(contentType)) return SourceLanguage.Sql;
+            return SourceLanguage.Cpp;
         }
 
         private static string ContextName(ContextKind kind)
