@@ -1,6 +1,6 @@
 # 实机回归清单
 
-适用于 Smart Input 0.3.3 及后续版本。**0.3.3** 为发布一致性修正版（标签、构建提交、三份资产统一到同一提交），无功能变更，143 项测试全过、退出码 0。版本脉络：**0.3.0** 在 0.2.1 的 Visual Studio 能力之上新增 Transact-SQL 与 SSMS（18 / 19 / 20 / 22）支持；**0.3.1** 为工程修复版，解决未安装 .NET SDK 时仅 MSBuild + NuGet 即可完整构建的问题；**0.3.2** 按 Pull Request 评审意见补齐了 SSMS 发布载荷打包、部署脚本安全（`-WhatIf` 只读、删除私有注册表前自动备份）与 Release 测试配置，并让 T-SQL 双引号遵循 `SET QUOTED_IDENTIFIER`（新增 OFF 时按字符串处理）；自动化测试（143 项）与双包结构校验已通过。**SSMS 22 已于 2026-10-07 完成首轮实机（部署、加载、菜单、状态栏、T-SQL 上下文识别，以及搜狗拼音自动 / 手动切换均通过，详见下文验证矩阵与 `docs/VALIDATION.md`）；SSMS 22 + 微软拼音以及 SSMS 18/19/20 仍需在装有对应环境的机器上按本清单实测。**
+适用于 Smart Input 0.3.3 及后续兼容版本。0.3.3 的发布验证快照包含 143 项自动化测试和现代 / Legacy 双包校验；SSMS 22 + 搜狗拼音已完成部署、加载、菜单、状态栏、T-SQL 上下文及自动 / 手动切换实测。SSMS 22 + 微软拼音、SSMS 18/19/20 以及 Visual Studio 的 T-SQL 编辑器仍需按本清单补测。完整版本与证据见 [验证报告](VALIDATION.md) 和 [发布说明](RELEASE-NOTES.md)。
 
 ## 安装之前
 
@@ -31,13 +31,13 @@
 
 ## SSMS 部署检查（0.3.0 新增）
 
-1. 普通用户可直接从 GitHub Release 下载 `SmartInput-SSMS22.zip` / `SmartInput-SSMS-Legacy.zip` 并解压；从源码验证则先运行 `.\build.ps1` 完成双包构建（需要时再用 `tools\Pack-Release.ps1` 生成上述两个 zip）。
+1. 普通用户可从主仓库的 [最新版本页面](https://github.com/Ysm-04/SmartInput-for-Visual-Studio/releases/latest) 下载 `SmartInput-SSMS22.zip` / `SmartInput-SSMS-Legacy.zip` 并解压；从源码验证则先运行 `.\build.ps1` 完成双包构建（需要时再用 `tools\Pack-Release.ps1` 生成上述两个 zip）。
 2. 建议先加 `-WhatIf` 只读演练（无需管理员、无需关闭 SSMS，不改动系统），确认目标目录与将要删除 / 备份的缓存无误，例如 `powershell -ExecutionPolicy Bypass -File .\Deploy-SSMS22.ps1 -WhatIf`（Release zip 解压目录下脚本名为 `.\Deploy-SSMS22.ps1`，源码树为 `.\tools\Deploy-SSMS22.ps1`）。
 3. 完全关闭 SSMS（任务管理器确认无 `Ssms.exe`）。
 4. 以管理员 PowerShell 运行对应脚本：
    - SSMS 22：`tools\Deploy-SSMS22.ps1`（Release zip 解压目录为 `.\Deploy-SSMS22.ps1`）。
    - SSMS 18/19/20：`tools\Deploy-SSMS-Legacy.ps1`（可加 `-Version 20`；Release zip 解压目录为 `.\Deploy-SSMS-Legacy.ps1`）。
-5. 确认脚本输出包含“已备份私有注册表：...SmartInput-PrivateRegistry-Backup\privateregistry.<时间戳>.bin”，且目标目录下文件已平铺（SSMS 22 为 6 个文件含 `manifest.json`、`catalog.json`；SSMS 18-20 为 4 个文件）。
+5. 确认目标目录下文件已平铺（SSMS 22 为 6 个文件，包含 `manifest.json`、`catalog.json`；SSMS 18-20 为 4 个文件）。若原缓存中存在 `privateregistry.bin`，脚本还应输出“已备份私有注册表：...SmartInput-PrivateRegistry-Backup\privateregistry.<时间戳>.bin”；缓存不存在时没有该提示属于正常情况。
 6. 启动 SSMS；若未加载，用 `Ssms.exe -log` 启动并查看 `%AppData%\Microsoft\SSMS\<版本>\ActivityLog.xml` 是否有 SmartInput / 程序集加载错误。
 7. 卸载验证：`-Uninstall` 后重启 SSMS，扩展与状态栏应消失。
 8. 注意不要把现代包装进 SSMS 18-20，也不要把 Legacy 包装进 SSMS 22 / Visual Studio，否则会出现“包未正确加载”。
@@ -62,7 +62,7 @@
 
 ## Visual Studio 场景
 
-- 安装 0.3.2 后重启 VS：扩展管理器显示版本为 0.3.2。
+- 安装 0.3.3 后重启 VS：扩展管理器显示版本为 0.3.3。
 - `工具 > 选项 > Smart Input > 常规`：只显示长期设置，不显示临时暂停项。
 - 修改手动覆盖光标颜色：进入手动覆盖后光标使用新颜色；退出覆盖后恢复原生光标。
 - 修改状态栏文字颜色：启用自定义颜色后底部 `Smart Input` 状态按钮文字变化；关闭后跟随 VS 主题。

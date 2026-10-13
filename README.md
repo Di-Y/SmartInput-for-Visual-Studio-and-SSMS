@@ -1,34 +1,50 @@
 # Smart Input for Visual Studio and SSMS
 
-作者：**我在人间做废物**
+面向中文开发者的本地智能输入态切换扩展：在代码、注释和字符串之间移动光标时，自动调整微软拼音或搜狗拼音的中英文状态。
 
-面向中文开发者的本地智能输入态切换扩展，项目名为 **Smart Input**。本项目独立实现，参考 Smart Input Pro 的交互思路，不包含其代码、资源、授权或收费系统。
+作者：**我在人间做废物**（[@Ysm-04](https://github.com/Ysm-04)）
 
-**当前版本为 0.3.3。**0.3.3 为发布一致性修正版：将发布标签、构建提交与三份发布资产统一到同一提交（此前 0.3.2 的标签与资产停留在早期提交，未包含打包脚本 U+2011 字符与路径修复），不改变任何功能与交互，143 项自动化测试仍全部通过。**0.3.2** 针对 Pull Request 评审意见完成四项修复：补齐可直接安装的 SSMS 发布载荷（新增一键打包脚本，分别生成面向 SSMS 22 与 SSMS 18/19/20 的两个独立压缩包）、加固手动部署脚本（`-WhatIf` 完全只读、删除私有注册表前自动备份、失败即报错）、修正 Release 测试配置与测试程序定位、让 T-SQL 双引号遵循 `SET QUOTED_IDENTIFIER`（`OFF` 时双引号内按字符串处理），自动化测试由 138 项增至 143 项；核心的自动中英文态切换功能与交互规则保持不变。**0.3.1** 为工程修复版，解决了在**未安装 .NET SDK** 的机器上仅靠 Visual Studio / Build Tools 自带的 MSBuild 与 NuGet 还原即可完整构建的问题（此前部分环境需要额外安装 .NET SDK 才能编译），并在 0.3.0 的基础上进一步完善了对 **SQL Server Management Studio（SSMS）18 / 19 / 20 / 22** 各版本的兼容、部署与加载支持，不新增功能。在原 Visual Studio 扩展的基础上，**0.3.0** 新增了对 **Transact-SQL** 语言和 **SQL Server Management Studio（SSMS）** 的支持：在 SQL 查询编辑器里，同样按光标所在的代码、注释、字符串上下文自动切换微软拼音 / 搜狗拼音的中英文态。扩展提供选项页、左下角状态栏和暂停/恢复命令，全程本地运行，不联网、不采集源码或按键。其中 **SSMS 22 已完成首轮实机验证**：扩展可正常安装加载，T-SQL 上下文识别、状态显示，以及**搜狗拼音的中英文自动切换与手动 Shift 切换均实测正常**（详见下文“兼容性与已知限制”）。
+[项目主页](https://github.com/Ysm-04/SmartInput-for-Visual-Studio) · [最新版本](https://github.com/Ysm-04/SmartInput-for-Visual-Studio/releases/latest) · [全部版本](https://github.com/Ysm-04/SmartInput-for-Visual-Studio/releases) · [问题反馈](https://github.com/Ysm-04/SmartInput-for-Visual-Studio/issues) · [提交贡献](https://github.com/Ysm-04/SmartInput-for-Visual-Studio/pulls)
 
-## 项目背景与由来
+当前稳定版本为 **[v0.3.3](https://github.com/Ysm-04/SmartInput-for-Visual-Studio/releases/tag/v0.3.3)**。扩展完全在本地运行，不联网，不采集源码、按键或候选词。
 
-在 Visual Studio 中编写代码时，中文开发者总要在中英文输入法之间反复手动切换：写代码需要英文，写注释、字符串里的中文又要切回中文。频繁的手动切换不仅打断思路、拖慢编码效率，还很容易在中英文（全角 / 半角）标点之间出错——例如把 `;`、`()`、`""` 误写成 `；`、`（）`、`“”`，从而带来不必要的编译错误和返工。
+## 快速下载
 
-本项目由 **Di-Y**（GitHub：[Di-Y](https://github.com/Di-Y)）**提出**。正是出于这一痛点，Di-Y 希望在 Visual Studio 与 SSMS 上获得类似 JetBrains IDE 插件 **Smart Input Pro (Chinese)** 的体验：无需手动切换，由扩展按光标所在的代码、注释、字符串上下文自动判断并切换中英文态，由此提出了 Smart Input 的产品设想与功能构想。需要特别说明的是，**项目早期（0.1.x – 0.2.x）Di-Y 仅提出需求意见与功能构想，并未参与编码实现**；自 **0.3.0 起 Di-Y 才亲自承担开发与维护**，0.3.0、0.3.1、0.3.2 与 0.3.3 各版本均由其更新开发。本项目为独立设计与实现，仅参考 Smart Input Pro (Chinese) 的交互思路，不包含对方的代码、资源、授权或收费系统。
+普通用户无需自行构建。请从 [最新版本页面](https://github.com/Ysm-04/SmartInput-for-Visual-Studio/releases/latest) 按宿主下载对应资产：
 
-分工与版本演进如下：
+| 宿主 | 下载资产 | 安装方式 |
+| --- | --- | --- |
+| Visual Studio 2022 / 2026 | `SmartInput.VisualStudio.vsix` | 双击并通过 VSIX Installer 安装 |
+| SSMS 22（2025，64 位） | `SmartInput-SSMS22.zip` | 解压后运行其中的 `Deploy-SSMS22.ps1` |
+| SSMS 18 / 19 / 20（32 位） | `SmartInput-SSMS-Legacy.zip` | 解压后运行其中的 `Deploy-SSMS-Legacy.ps1` |
 
-| 角色 | 说明 |
-| --- | --- |
-| 项目提出者（需求与功能构想）：**Di-Y** | 定义产品目标、交互规则与功能边界。0.1.x – 0.2.x 阶段仅提出意见与功能构想，**未参与前期编码** |
-| 前期主要实现（0.1.x – 0.2.x）：**我在人间做废物** | 完成 Visual Studio 上 C / C++ / C# 的自动中英文态切换 |
-| 0.3.0 开发与维护：**Di-Y** | 新增 Transact-SQL 语言与 SSMS 18 / 19 / 20 / 22 支持，构建现代 + Legacy 双包 |
-| 0.3.1 开发与维护：**Di-Y** | 工程修复版：解决未安装 .NET SDK 时的构建问题（仅 MSBuild + NuGet 即可构建），进一步完善了对 **SQL Server Management Studio（SSMS）18 / 19 / 20 / 22** 各版本的兼容 |
-| 0.3.2 开发与维护：**Di-Y** | 按 Pull Request 评审意见完成四项修复：补齐 SSMS 发布载荷打包、部署脚本 `-WhatIf` 安全与私有注册表备份、Release 测试配置与定位、T-SQL 双引号遵循 `SET QUOTED_IDENTIFIER`；自动化测试由 138 增至 143 项 |
-| 0.3.3 开发与维护：**Di-Y** | 发布一致性修正版：将发布标签、构建提交与三份发布资产统一到同一提交，无功能变更；143 项自动化测试仍全部通过 |
-| 协同开发 / 贡献 | 见下文“协同开发与贡献”一节 |
+> 两套 SSMS 安装包不能混用。SSMS 不通过 VSIX Installer 安装第三方扩展，部署前请先阅读下文的安装说明，并优先使用 `-WhatIf` 进行只读演练。
+
+## 导航
+
+- [功能演示](#功能演示)
+- [支持范围](#支持范围)
+- [交互规则](#交互规则)
+- [安装与使用](#安装与使用)
+- [兼容性与已知限制](#兼容性与已知限制)
+- [构建与测试](#构建与测试)
+- [参与贡献](#参与贡献)
 
 ## 功能演示
 
 ![Visual Studio Smart Input 自动切换输入法演示](docs/assets/smart-input-demo.gif)
 
 ![SSMS Smart Input 自动切换输入法演示](docs/assets/SSMS.gif)
+
+## 主要功能
+
+- 根据代码、注释、字符串等文本上下文自动选择中文或英文输入态。
+- 支持 C、C++、C# 和 Transact-SQL（T-SQL）。
+- 支持当前活动的微软拼音和搜狗拼音，不主动切换键盘布局或其他输入法。
+- 用户手动切换后进入临时覆盖状态，不会在同一区域立即抢回输入态。
+- 提供编辑器状态按钮、暂停/恢复命令、光标提示颜色和可持久化选项。
+- 有选区、多光标、输入法组词或编辑器失焦时暂停自动切换。
+- 不修改源代码、不自动替换标点，不联网、不采集源码或按键。
 
 ## 支持范围
 
@@ -99,57 +115,36 @@ Transact-SQL 规则（0.3.0 新增）：
 - 不修改源文本，不自动替换标点；不联网、不采集源码、按键或候选词。
 - 不写入“字体和颜色”或正文画刷；失焦、暂停、关闭文档时移除自定义光标装饰并恢复原生光标。
 
-## 构建与测试
-
-需要 MSBuild（VS 2022 17.14+ 或兼容版本）和 .NET Framework 4.8 目标包。**不需要 .NET SDK，也不需要先安装 VS 扩展开发工作负载**：编辑器引用和 VSIX 构建任务从 NuGet 项目依赖获得（VSSDK 17 与 VSSDK 15 依赖都会还原到项目 `.packages` 目录）。
-
-```powershell
-.\build.ps1
-# 已还原依赖时可离线构建
-.\build.ps1 -SkipRestore
-# 也可显式指定 MSBuild
-.\build.ps1 -MSBuildPath 'C:\Path\To\MSBuild.exe'
-```
-
-脚本只还原、构建、测试和检查打包内容，不安装扩展，不启动 VS / SSMS。一次构建产出两套互不相同的二进制（**不能互换使用**，否则会出现“包未正确加载”）：
-
-- 现代包（x64，VSSDK 17）：`src/SmartInput.VisualStudio/bin/Release/SmartInput.VisualStudio.vsix`，用于 Visual Studio 2022/2026 与 SSMS 22。
-- Legacy 包（AnyCPU，绑定 VSSDK 15.0.0.0）：`src/SmartInput.Ssms.Legacy/bin/Release/`，用于 32 位 SSMS 18/19/20。
-
-`tools/Verify-Package.ps1` 校验现代 VSIX，`tools/Verify-LegacyPackage.ps1` 校验 Legacy 负载（文件齐全、AnyCPU、引用程序集确为 15.x、pkgdef 与 v1 清单要素完整）。
-
-制作 GitHub Release 上传的 SSMS 安装包时，运行 `tools/Pack-Release.ps1`（先完成上面的 Release 构建），它会在 `artifacts/` 下生成两个开箱即用的压缩包：`SmartInput-SSMS22.zip`（现代 VSIX + `Deploy-SSMS22.ps1` + 安装说明）与 `SmartInput-SSMS-Legacy.zip`（Legacy 四个平铺文件 + `Deploy-SSMS-Legacy.ps1` + 安装说明）；加 `-Build` 可先自动执行一次 `build.ps1`。
-
 ## 安装与使用
 
-### 获取发布包（普通用户无需自行构建）
-
-从 GitHub 的 [Releases](https://github.com/Di-Y/SmartInput-for-Visual-Studio-and-SSMS/releases) 按宿主下载对应资产：
-
-| 宿主 | 下载资产 | 安装方式 |
-| --- | --- | --- |
-| Visual Studio 2022 / 2026 | `SmartInput.VisualStudio.vsix` | 双击经 VSIX Installer 安装 |
-| SSMS 22（2025，64 位） | `SmartInput-SSMS22.zip` | 解压后用其中的 `Deploy-SSMS22.ps1` 平铺部署 |
-| SSMS 18 / 19 / 20（32 位） | `SmartInput-SSMS-Legacy.zip` | 解压后用其中的 `Deploy-SSMS-Legacy.ps1` 平铺部署 |
-
-两个 SSMS 压缩包都已把部署脚本与所需载荷放在同一目录，解压后在该目录内运行脚本即可，脚本会自动找到同目录的 VSIX / 平铺文件，无需保留源码目录结构。正式部署前可先加 `-WhatIf` 只读演练（不改动系统，也不要求管理员权限或关闭 SSMS）；脚本删除 SSMS 私有注册表缓存前，会先自动备份到缓存目录下的 `SmartInput-PrivateRegistry-Backup` 子目录。
+所有公开安装包均以 [Ysm-04/SmartInput-for-Visual-Studio Releases](https://github.com/Ysm-04/SmartInput-for-Visual-Studio/releases) 为准。两个 SSMS 压缩包均已包含部署脚本和对应载荷，解压后无需保留源码目录结构。
 
 ### Visual Studio 2022 / 2026
 
-双击安装 `src/SmartInput.VisualStudio/bin/Release/SmartInput.VisualStudio.vsix`，重启 Visual Studio。
+1. 从 [最新版本页面](https://github.com/Ysm-04/SmartInput-for-Visual-Studio/releases/latest) 下载 `SmartInput.VisualStudio.vsix`。
+2. 双击文件并通过 VSIX Installer 选择目标 Visual Studio 实例。
+3. 安装完成后重启 Visual Studio。
+
+从源码构建时，VSIX 位于 `src/SmartInput.VisualStudio/bin/Release/SmartInput.VisualStudio.vsix`。
 
 ### SSMS 22（SSMS 2025，64 位）
 
-先完全关闭 SSMS，然后用**“以管理员身份运行”**的 PowerShell 执行：
+1. 从 [最新版本页面](https://github.com/Ysm-04/SmartInput-for-Visual-Studio/releases/latest) 下载并解压 `SmartInput-SSMS22.zip`。
+2. 可先在普通 PowerShell 中运行 `-WhatIf`，核对安装目录、缓存和备份位置。此步骤不修改系统，也无需关闭 SSMS。
+3. 正式部署前完全关闭 SSMS，确认任务管理器中没有 `Ssms.exe`，再用**“以管理员身份运行”**的 PowerShell 执行安装命令。
 
 ```powershell
-# 从源码构建部署；若从 Release 的 SmartInput-SSMS22.zip 解压，则在解压目录运行 .\Deploy-SSMS22.ps1
-powershell -ExecutionPolicy Bypass -File .\tools\Deploy-SSMS22.ps1
-# 正式执行前可先只读演练（不改动系统，也无需管理员权限或关闭 SSMS）
-powershell -ExecutionPolicy Bypass -File .\tools\Deploy-SSMS22.ps1 -WhatIf
+# 在 Release 解压目录中只读演练
+powershell -ExecutionPolicy Bypass -File .\Deploy-SSMS22.ps1 -WhatIf
+
+# 正式安装（管理员 PowerShell）
+powershell -ExecutionPolicy Bypass -File .\Deploy-SSMS22.ps1
+
 # 卸载
-powershell -ExecutionPolicy Bypass -File .\tools\Deploy-SSMS22.ps1 -Uninstall
+powershell -ExecutionPolicy Bypass -File .\Deploy-SSMS22.ps1 -Uninstall
 ```
+
+从源码部署时，将脚本路径改为 `.\tools\Deploy-SSMS22.ps1`；脚本会自动使用构建产生的现代 VSIX。
 
 脚本会把现代 VSIX（本质是 zip）解压、平铺为 SSMS 22 需要的文件到
 `C:\Program Files\Microsoft SQL Server Management Studio\22\Release\Common7\IDE\Extensions\SmartInput\`，
@@ -161,30 +156,36 @@ powershell -ExecutionPolicy Bypass -File .\tools\Deploy-SSMS22.ps1 -Uninstall
 - 脚本默认只自动探测 `C:\Program Files\...` 下的标准安装路径；若 SSMS 安装在自定义目录，请显式传入 IDE 目录，例如：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\tools\Deploy-SSMS22.ps1 -SsmsIdeDir 'D:\SQL Server Studio 22\Common7\IDE'
+powershell -ExecutionPolicy Bypass -File .\Deploy-SSMS22.ps1 -SsmsIdeDir 'D:\SQL Server Studio 22\Common7\IDE'
 ```
 
 - 部署会清理 SSMS 的私有注册表与 MEF 缓存，首次重启可能需要重新确认一次界面布局；使用本地“Windows 身份验证”连接数据库引擎不需要任何 Microsoft / Azure 账号登录。
 
 ### SSMS 18 / 19 / 20（SSMS 2022 代，32 位）
 
-先完全关闭 SSMS，然后用**“以管理员身份运行”**的 PowerShell 执行：
+1. 从 [最新版本页面](https://github.com/Ysm-04/SmartInput-for-Visual-Studio/releases/latest) 下载并解压 `SmartInput-SSMS-Legacy.zip`。
+2. 可先在普通 PowerShell 中运行 `-WhatIf`，确认本机检测到的 SSMS 版本和目标路径。
+3. 正式部署前完全关闭对应版本的 SSMS，再用**“以管理员身份运行”**的 PowerShell 执行安装命令。
 
 ```powershell
-# 部署到本机检测到的所有 18/19/20 版本
-# 从源码构建用 .\tools\Deploy-SSMS-Legacy.ps1；从 Release 的 SmartInput-SSMS-Legacy.zip 解压则运行 .\Deploy-SSMS-Legacy.ps1
-powershell -ExecutionPolicy Bypass -File .\tools\Deploy-SSMS-Legacy.ps1
+# 在 Release 解压目录中只读演练
+powershell -ExecutionPolicy Bypass -File .\Deploy-SSMS-Legacy.ps1 -WhatIf
+
+# 部署到检测到的所有 18/19/20 版本（管理员 PowerShell）
+powershell -ExecutionPolicy Bypass -File .\Deploy-SSMS-Legacy.ps1
+
 # 只装某一版（18 / 19 / 20）
-powershell -ExecutionPolicy Bypass -File .\tools\Deploy-SSMS-Legacy.ps1 -Version 20
-# 正式执行前可先只读演练（不改动系统，也无需管理员权限或关闭 SSMS）
-powershell -ExecutionPolicy Bypass -File .\tools\Deploy-SSMS-Legacy.ps1 -WhatIf
+powershell -ExecutionPolicy Bypass -File .\Deploy-SSMS-Legacy.ps1 -Version 20
+
 # 卸载
-powershell -ExecutionPolicy Bypass -File .\tools\Deploy-SSMS-Legacy.ps1 -Uninstall
+powershell -ExecutionPolicy Bypass -File .\Deploy-SSMS-Legacy.ps1 -Uninstall
 ```
+
+从源码部署时，将脚本路径改为 `.\tools\Deploy-SSMS-Legacy.ps1`。
 
 脚本把 Legacy 负载平铺到
 `C:\Program Files (x86)\Microsoft SQL Server Management Studio {18|19|20}\Common7\IDE\Extensions\SmartInput\`，
-并清理 `%LocalAppData%\Microsoft\SQL Server Management Studio\{版本}.0_IsoShell\` 下的私有注册表与 MEF 缓存。SSMS 只扫描 Program Files 下的全局扩展目录，不扫描当前用户目录。从 Release 的 `SmartInput-SSMS-Legacy.zip` 安装时，脚本与四个载荷文件在同一解压目录，把命令中的脚本路径改为 `.\Deploy-SSMS-Legacy.ps1` 即可；删除私有注册表前同样会先自动备份到 `SmartInput-PrivateRegistry-Backup`。
+并清理 `%LocalAppData%\Microsoft\SQL Server Management Studio\{版本}.0_IsoShell\` 下的私有注册表与 MEF 缓存。SSMS 只扫描 Program Files 下的全局扩展目录，不扫描当前用户目录；删除私有注册表前会先自动备份到 `SmartInput-PrivateRegistry-Backup`。
 
 ### 安装后检查
 
@@ -214,21 +215,49 @@ powershell -ExecutionPolicy Bypass -File .\tools\Deploy-SSMS-Legacy.ps1 -Uninsta
 
 后台词法扫描器负责引号、注释和插值的边界分析，VS 语法分类辅助排除非活动代码；它不是完整编译器。T-SQL 部分覆盖注释、单引号字符串、括号标识符与双引号定界内容的常见写法；双引号按文本中出现的 `SET QUOTED_IDENTIFIER ON/OFF` 顺序判定（默认 ON：双引号为标识符；OFF：双引号为字符串）。由于 `QUOTED_IDENTIFIER` 本质是连接 / 批处理 / 运行时设置，存储过程、触发器内或跨 `GO` 批处理中由运行时决定、静态文本无法确定的取值，仍按默认 ON 处理；非常见的宿主专有语法也可能存在识别偏差。分类信息尚未更新时，可能暂时按词法结果判断。
 
+## 构建与测试
+
+构建需要 MSBuild（Visual Studio 2022 17.14+ 或兼容版本）和 .NET Framework 4.8 目标包。**不需要单独安装 .NET SDK，也不要求预装 Visual Studio 扩展开发工作负载**；VSSDK 17、VSSDK 15 和 VSIX 构建依赖由 NuGet 还原到项目的 `.packages` 目录。
+
+```powershell
+# 还原、Release 构建、运行测试并校验两套包
+.\build.ps1 -Configuration Release
+
+# 已还原依赖时可离线构建
+.\build.ps1 -Configuration Release -SkipRestore
+
+# 也可显式指定 MSBuild
+.\build.ps1 -Configuration Release -MSBuildPath 'C:\Path\To\MSBuild.exe'
+```
+
+脚本不会安装扩展、启动 Visual Studio / SSMS 或修改系统输入法。一次构建会产生两套不可互换的二进制：
+
+- 现代包（x64，VSSDK 17）：`src/SmartInput.VisualStudio/bin/Release/SmartInput.VisualStudio.vsix`，用于 Visual Studio 2022/2026 与 SSMS 22。
+- Legacy 包（AnyCPU，绑定 VSSDK 15）：`src/SmartInput.Ssms.Legacy/bin/Release/`，用于 32 位 SSMS 18/19/20。
+
+`tools/Verify-Package.ps1` 校验现代 VSIX，`tools/Verify-LegacyPackage.ps1` 校验 Legacy 负载。制作发布附件时运行：
+
+```powershell
+.\tools\Pack-Release.ps1 -Build
+```
+
+生成的 `SmartInput-SSMS22.zip` 和 `SmartInput-SSMS-Legacy.zip` 位于 `artifacts/`。完整验证记录见 [docs/VALIDATION.md](docs/VALIDATION.md)，实机回归项目见 [docs/MANUAL-TESTS.md](docs/MANUAL-TESTS.md)。
+
 ## 兼容性与已知限制
 
-截至 0.3.3，**143 项自动化测试全部通过**（0.3.0 在 0.2.1 的 104 项基础上新增 34 项 T-SQL 用例；0.3.2 再补 5 项 `SET QUOTED_IDENTIFIER ON/OFF` 用例），包含三语言随机文本边界安全、Profile 匹配、23 项光标绘制与生命周期检查，以及离屏 WPF 渲染的颜色像素检查。现代 VSIX 与 Legacy 负载的结构、目标版本、依赖隔离、AnyCPU / VSSDK 15 绑定均通过脚本校验。
+v0.3.3 发布记录包含 143 项自动化测试、现代 VSIX 校验和 Legacy 负载校验。该结果是对应发布提交的验证快照；仓库当前未配置 GitHub Actions，因此不能代替每次提交后的持续集成检查。
 
-需要如实说明的验证边界：
+| 环境 | 当前验证状态 |
+| --- | --- |
+| Visual Studio 2022 / 2026，C/C++/C#，微软拼音与搜狗拼音 | 已完成既有功能实机验证 |
+| SSMS 22.10 / Windows 11 / 搜狗拼音 | 部署、MEF 加载、菜单、状态栏、T-SQL 上下文、自动切换和手动 Shift 覆盖均已实测通过 |
+| SSMS 22 / 微软拼音 | 尚未完成同项实机验证 |
+| SSMS 18 / 19 / 20 Legacy 包 | 包结构已校验，宿主加载和输入法行为尚待实机验证 |
+| Visual Studio 的 T-SQL 编辑器 | 建议继续补充实机验证 |
 
-- 构建与自动化测试、双包结构校验在本机完成。**SSMS 22 已完成首轮实机验证**（环境：Windows 11、SSMS 22.10.12210.168 / x64、本地 SQL Server、Windows 身份验证、搜狗拼音）：管理员部署脚本可把 6 个文件平铺到 `Common7\IDE\Extensions\SmartInput` 并清理私有注册表 / MEF 缓存；重启后扩展被 MEF 成功加载（`Ssms.exe -log` 的 `ActivityLog.xml` 记录了 `.pkgdef` 扫描），`工具` 菜单出现 `Smart Input: 暂停/恢复自动切换` 命令；打开 `.sql` 查询后左下角出现 `Smart Input` 状态条，并随光标位置正确显示区域与目标输入态——普通代码 / 空行为“自动 · 英文 · 代码”，`/* … */` 块注释为“自动 · 中文 · 注释”；有选区时显示“选区中，暂不切换”，手动按 Shift 进入“手动覆盖”、与推荐态不符时输入光标变为配置的提示色，移动到其它区域后自动恢复自动模式；**用物理键盘实测，鼠标在代码区与注释区（及含汉字字符串）之间移动时，搜狗拼音会自动切换到对应中 / 英文态（代码区直接上屏英文、注释区可输入中文），手动按 Shift 切换同样正常**；连接、编辑与反复移动光标全程无崩溃或挂起。
-- **SSMS 22 + 搜狗拼音的自动切换已实测通过。** 用物理键盘在代码区与注释区（及含汉字字符串）之间移动光标，搜狗拼音即随上下文自动在英文 / 中文间切换：代码区直接上屏英文，注释区可输入中文，无需额外按键；手动按 Shift 的手动覆盖、与推荐态不符时的提示色光标、移动到其它区域后自动恢复等行为也均正常，未出现“状态条正确但输入法不跟随”的情况。
-- **微软拼音在 SSMS 22 下尚未单独做同项实机验证**（本轮活动输入法为搜狗拼音）。微软拼音走 WPF 原生 TSF 状态通道、不模拟按键；鉴于第三方 TSF 的搜狗拼音已实测可正常自动 / 手动切换，微软拼音预期同样可用，但在取得实测结论前仍欢迎通过 Issue 反馈结果。
-- **SSMS 18 / 19 / 20（32 位 Legacy 包）本机未安装，仍未经实机验证**：其实际加载、T-SQL 编辑器 ContentType 的运行时名称与输入法切换表现，需在装有对应版本的机器上按 `docs/MANUAL-TESTS.md` 确认。为降低风险，SQL 编辑器同时以精确的 `SQL` ContentType 和运行时按类型名兜底（类型名含 SQL 但非 `SQL` 派生时也接管）两种方式接入。
-- Visual Studio 上的 C/C++、C# 行为延续 0.2.1；新增的 T-SQL 路径在 Visual Studio 的 SQL 编辑器中同样建议实测。
-- SSMS 18/19/20 的 Legacy 包不提供“工具”菜单暂停命令（该宿主不编译菜单资源），暂停 / 恢复请用状态栏按钮。
-- 搜狗拼音的 Shift 兜底在 32 位与 64 位进程中的 Win32 结构体布局沿用既有实现；该兜底在 Visual Studio 与 SSMS 22（WPF 编辑器）中均已实测，自动切换与手动 Shift 切换表现正常。
+完整环境、证据与验证边界见 [验证记录](docs/VALIDATION.md)，复测时请使用 [实机回归清单](docs/MANUAL-TESTS.md)。
 
-Windows 的输入态可能受“每个应用窗口使用不同输入法”等系统选项影响。本扩展限制自己的调用范围，但不能仅凭这一点保证切出宿主后系统完全不会继承原输入态。
+Windows 的输入态可能受“每个应用窗口使用不同输入法”等系统选项影响。扩展会限制自己的调用范围，但无法保证离开宿主后 Windows 不继承原输入态。SSMS 18/19/20 的 Legacy 包不提供“工具”菜单暂停命令，请使用状态栏按钮或选项页。
 
 以下范围不属于当前支持承诺：
 
@@ -236,30 +265,40 @@ Windows 的输入态可能受“每个应用窗口使用不同输入法”等系
 - 微软拼音旧版兼容模式。
 - C++ 预处理器复杂分支/拼接、C# 插值格式段、T-SQL 宿主专有方言和不完整语法的全部边界。
 
-## 协同开发与贡献
+## 项目由来与贡献者
 
-感谢项目提出者与各位协作者参与 Smart Input 的开发与维护（具体贡献以 Git 提交记录与发布说明为准）：
+Smart Input 源于中文开发者在代码、注释和字符串之间频繁切换输入法的实际痛点：手动切换容易打断思路，也可能把半角标点误输为全角标点。本项目独立设计与实现，只参考 Smart Input Pro (Chinese) 的交互思路，不包含对方的代码、资源、授权或收费系统。
 
-- **Di-Y**（GitHub：[Di-Y](https://github.com/Di-Y)）—— **项目提出者，0.3.0 / 0.3.1 / 0.3.2 / 0.3.3 开发者与维护者**。Di-Y 提出了 Smart Input 的产品目标、交互规则与功能构想；在 0.1.x – 0.2.x 阶段仅提供需求意见与功能构想、未参与编码，自 0.3.0 起亲自承担开发与维护，涵盖 Transact-SQL 语言与 SSMS 多版本（18 / 19 / 20 / 22）适配、Visual Studio 与 SSMS 双包（VSSDK 17 / VSSDK 15）工程结构、SSMS 各版本手动部署与扩展加载相关问题的修复，以及在未安装 .NET SDK 环境下构建与打包流程的工程化（仅 MSBuild + NuGet 还原即可构建），并完善文档、部署脚本、样例与自动化测试用例。
+项目由 [Di-Y](https://github.com/Di-Y) 提出产品设想和功能构想，前期由 **我在人间做废物** 完成 Visual Studio 版本的主要实现。版本分工如下：
 
-欢迎更多开发者参与协同开发，推荐流程如下：
+| 版本 | 主要贡献 |
+| --- | --- |
+| 0.1.x – 0.2.x | **我在人间做废物**：实现 Visual Studio 上 C/C++/C# 的自动中英文态切换；Di-Y 提供需求意见与功能构想 |
+| 0.3.0 | **Di-Y**：新增 T-SQL、SSMS 18/19/20/22 支持及现代包 + Legacy 双包结构 |
+| 0.3.1 | **Di-Y**：修复无独立 .NET SDK 环境下的构建流程，完善 SSMS 部署与加载兼容性 |
+| 0.3.2 | **Di-Y**：补齐发布载荷、部署脚本安全、Release 测试配置和 `QUOTED_IDENTIFIER` 处理 |
+| 0.3.3 | **Di-Y**：统一发布标签、构建提交与三份发布资产，无功能行为变更 |
 
-1. 在 GitHub 上通过 Issue 反馈缺陷或提出功能建议，并附上系统版本、Visual Studio / SSMS 版本、扩展版本、输入法版本、复现步骤与实际表现（请勿上传私人源码、候选词或完整按键记录）。
-2. Fork 仓库后在独立分支修改，通过 Pull Request 提交，并在描述中说明动机、改动点与验证方式。
-3. 改动请遵循“只解决目标问题、不改变既有交互语义”的原则；提交前在仓库根目录运行 `.\build.ps1`，确保 **143 项自动化测试**与 `tools\Verify-Package.ps1`、`tools\Verify-LegacyPackage.ps1` 双包校验全部通过。
-4. 不要提交 `.packages`、`bin`、`obj`、`.vs` 等 NuGet 还原或构建产物；新增第三方依赖时须注明来源与许可证。
-5. 始终遵守本项目的本地与隐私边界：不联网、不采集源码或按键、不自动替换标点（详见 `docs/PRIVACY.md`）。
+具体变更以 Git 提交记录和 [发布说明](docs/RELEASE-NOTES.md) 为准。
 
-> 协作者的具体贡献以 Git 提交记录与发布说明（`docs/RELEASE-NOTES.md`）为准；如署名或贡献描述需要调整，欢迎通过 Issue 或 Pull Request 更正。
+## 参与贡献
+
+1. 通过本仓库的 [Issues](https://github.com/Ysm-04/SmartInput-for-Visual-Studio/issues) 报告缺陷或提出建议，并附上系统、宿主、扩展和输入法版本，以及复现步骤与实际表现。
+2. Fork 仓库后在独立分支修改，通过 [Pull Requests](https://github.com/Ysm-04/SmartInput-for-Visual-Studio/pulls) 提交，并说明动机、改动和验证方式。
+3. 提交前运行 `.\build.ps1 -Configuration Release`，确认当前自动化测试、现代 VSIX 和 Legacy 负载校验全部通过。
+4. 不要提交 `.packages`、`bin`、`obj`、`.vs` 等还原或构建产物；新增第三方依赖时须注明来源与许可证。
+5. 遵守项目的[隐私边界](docs/PRIVACY.md)：不联网、不采集源码或按键、不自动替换标点。
+
+反馈时请勿上传私人源码、候选词或完整键盘记录。署名或贡献描述需要调整时，也请通过本仓库的 Issue 或 Pull Request 提出。
 
 ## 许可证
 
-作者：**我在人间做废物**。
+作者：**我在人间做废物**（[@Ysm-04](https://github.com/Ysm-04)）。
 
 本项目采用 [MIT License](LICENSE)。除许可证文本中规定的条件外，使用、修改、分发本项目不附加额外限制。项目依赖遵循各自许可证，不代表本项目许可证覆盖第三方代码、商标或资源。
 
 提交代码或文档时，请确保提交内容由提交者拥有相应权利，或已取得必要授权；新增第三方依赖时，请同时说明其来源和许可证。
 
-问题反馈请提供系统版本、Visual Studio / SSMS 版本、扩展版本、输入法版本、操作步骤和实际表现。提交问题时请避免上传私人源码、候选词或完整按键记录。
+问题反馈请提交到本仓库的 [Issues](https://github.com/Ysm-04/SmartInput-for-Visual-Studio/issues)，并提供系统版本、Visual Studio / SSMS 版本、扩展版本、输入法版本、操作步骤和实际表现。
 
 参考：[SSMS 版本与扩展兼容说明](https://learn.microsoft.com/sql/ssms/sql-server-management-studio-changelog-ssms)、[VS 2026 扩展兼容模型](https://learn.microsoft.com/zh-cn/visualstudio/extensibility/migration/extension-compatibility?view=visualstudio)、[VS 光标格式接口](https://learn.microsoft.com/en-us/visualstudio/extensibility/walkthrough-customizing-the-text-view?view=vs-2022)、[WPF InputMethod](https://learn.microsoft.com/en-us/dotnet/api/system.windows.input.inputmethod?view=netframework-4.8)。SSMS 手动部署与缓存清理的实现参考了开源项目 [mourier/sql-pilot](https://github.com/mourier/sql-pilot) 的集成笔记。

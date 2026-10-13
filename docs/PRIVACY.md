@@ -22,6 +22,17 @@ Smart Input 是本地 Visual Studio / SQL Server Management Studio 扩展。本�
 
 临时暂停状态只保存在当前宿主进程内，不写入用户设置。
 
+## 安装与部署脚本
+
+扩展运行时本身不会写入源码或联网。SSMS 安装、卸载脚本属于用户主动执行的本地管理工具，会在 `-WhatIf` 以外的正式操作中：
+
+- 向 SSMS 的 `Common7\IDE\Extensions\SmartInput` 目录写入或删除扩展文件。
+- 在删除既有 `privateregistry.bin` 前，将其备份到 `SmartInput-PrivateRegistry-Backup`。
+- 清理 SSMS 私有注册表缓存与 `ComponentModelCache`，并写入 `extensions.configurationchanged` 标记，使宿主重新发现扩展。
+- 对部署文件执行 `Unblock-File`，移除浏览器下载文件可能携带的网络区域标记。
+
+这些脚本不上传上述文件或缓存。正式部署和卸载前应关闭 SSMS，并先使用 `-WhatIf` 核对目标路径和计划执行的操作。
+
 ## 不做的事
 
 - 不联网。

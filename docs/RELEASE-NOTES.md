@@ -1,10 +1,12 @@
 # 发布说明
 
-作者：**我在人间做废物**
+作者：**我在人间做废物**（[@Ysm-04](https://github.com/Ysm-04)）
 
-## 0.3.3
+当前稳定版本及安装包以主仓库的 [Releases](https://github.com/Ysm-04/SmartInput-for-Visual-Studio/releases) 为准。
 
-状态：**发布一致性修正版，无功能变更**。修复 0.3.2 的发布标签与三份资产停留在早期提交 `4f5b9e8`、未包含 `tools/Pack-Release.ps1` 打包脚本修复（U+2011 非 ASCII 连字符、`build.ps1` 根目录路径）的问题。本版本在**同一提交**上完成干净构建、打标签与发布，确保“发布标签 = 构建提交 = 三份资产”三者完全对应、可追溯。
+## [0.3.3](https://github.com/Ysm-04/SmartInput-for-Visual-Studio/releases/tag/v0.3.3)
+
+状态：**发布一致性修正版，无功能变更**。修复 0.3.2 的发布标签与三份资产停留在早期提交 `4f5b9e8`、未包含 `tools/Pack-Release.ps1` 打包脚本修复（U+2011 非 ASCII 连字符、`build.ps1` 根目录路径）的问题。主仓库标签 `v0.3.3` 指向构建提交 `7a68d66`，确保“发布标签 = 构建提交 = 三份资产”三者完全对应、可追溯。
 
 ### 变更
 
@@ -39,7 +41,7 @@
 
 ### 发布资产
 
-由 `tools/Pack-Release.ps1` 生成（GitHub Release 0.3.2）：
+由 `tools/Pack-Release.ps1` 生成。0.3.2 未在当前主仓库单独发布，相关构建已由主仓库 `v0.3.3` 修正版取代：
 
 - `SmartInput.VisualStudio.vsix`：Visual Studio 2022 / 2026 双击安装。
 - `SmartInput-SSMS22.zip`：SSMS 22（2025，64 位），含现代 VSIX 与 `Deploy-SSMS22.ps1`。
@@ -137,7 +139,7 @@ SHA256：构建完成后以本地 `tools/Verify-Package.ps1`、`tools/Verify-Leg
 src/SmartInput.VisualStudio/bin/Release/SmartInput.VisualStudio.vsix
 ```
 
-SHA256：构建完成后以 `README.md` 和 `docs/VALIDATION.md` 中记录的值为准。
+SHA256：`7A0679D76B1865B1590A3B2F7D31CD3C622A4005F95A556884EC3436F038E65D`（历史发布资产）。
 
 ### 修复
 

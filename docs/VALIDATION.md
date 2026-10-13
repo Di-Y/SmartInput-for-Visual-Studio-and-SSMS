@@ -1,12 +1,12 @@
 # 验证报告
 
-更新日期：2026-10-09（0.3.2 版本发布）。当前版本：0.3.2（Pull Request 评审四项修复版：补齐发布载荷、部署脚本 `-WhatIf` 安全与私有注册表备份、Release 测试配置与定位、T-SQL 双引号遵循 `SET QUOTED_IDENTIFIER`，自动化测试由 138 增至 143）。0.3.1 为工程修复版，解决未安装 .NET SDK 机器上的构建问题、根治 IDE 设计时 `Microsoft.VisualStudio.*` 命名空间报红并消除 MSB3277，不新增功能、测试仍为 138；0.3.0 新增 Transact-SQL 与 SSMS 支持。
+更新日期：2026-10-13。当前版本：**0.3.3**（发布一致性修正版，无功能行为变更）。主仓库 [v0.3.3 Release](https://github.com/Ysm-04/SmartInput-for-Visual-Studio/releases/tag/v0.3.3) 的标签、构建提交与三份发布资产对应同一提交；0.3.2 完成发布载荷、部署脚本安全、Release 测试配置与 `SET QUOTED_IDENTIFIER` 处理修复，自动化测试由 138 增至 143 项。
 
 ## 0.3.3 结果摘要
 
 - 0.3.3 为**发布一致性修正版，无功能变更**；解决 0.3.2 发布标签与三份资产停留在早期提交 `4f5b9e8`、未包含打包脚本修复（U+2011 连字符、`build.ps1` 路径）的问题。
 - 从干净检出执行 `.\tools\Pack-Release.ps1 -Build`：还原 → 四工程构建 → **143 项自动化测试全部通过、0 失败** → 现代 / Legacy 双包校验 → 生成两个发布 zip，**退出码 0**。
-- 发布标签 0.3.3、构建提交、三份资产对应**同一提交**；版本号在现代 VSIX Identity、Legacy manifest / pkgdef、两个程序集、`InstalledProductRegistration` 统一为 0.3.3。
+- 主仓库发布标签 `v0.3.3`、构建提交、三份资产对应**同一提交**；版本号在现代 VSIX Identity、Legacy manifest / pkgdef、两个程序集、`InstalledProductRegistration` 统一为 0.3.3。
 - 三份资产 SHA-256 见 `docs/RELEASE-NOTES.md`（构建后回填），功能与交互同 0.3.2。
 
 ## 0.3.2 结果摘要
@@ -72,9 +72,9 @@
 - SSMS 18 / 19 / 20（32 位 Legacy 包）：本机未安装，加载、ContentType 运行时名称与输入法切换均未实测。
 - SSMS 22 除深色主题 / 当前 DPI 外的其它主题、显示缩放组合。
 
-## 0.3.0 尚未覆盖的验证（重要）
+## 0.3.0 发布时尚未覆盖的验证（历史记录）
 
-- **构建机未安装任何版本 SSMS**，以下内容**未经实机验证**，需在装有 SSMS 的机器上按 `MANUAL-TESTS.md` 确认：
+- 以下为 0.3.0 发布时的验证边界。该构建机当时未安装任何版本 SSMS，因此下列内容在 0.3.0 阶段未经实机验证；后续已完成的 SSMS 22 + 搜狗拼音验证以本文前面的 0.3.1 实机记录为准：
   - SSMS 22 与 SSMS 18/19/20 是否成功发现并加载扩展（pkgdef 扫描、MEF 组合、私有注册表缓存重建）。
   - SSMS 查询编辑器 ContentType 的运行时实际名称（已用精确 `SQL` + 按类型名含 “SQL” 兜底双保险降低风险，但仍需实测）。
   - SSMS 宿主内微软拼音 / 搜狗拼音的状态读取与切换表现。
@@ -107,6 +107,7 @@
 
 ## 版本历史
 
+- 0.3.3：发布一致性修正版，无功能变更；主仓库标签 `v0.3.3`、构建提交 `7a68d66` 与三份资产保持一致，143 项自动化测试及现代 / Legacy 双包校验记录沿用该构建快照。
 - 0.3.2：Pull Request 评审四项修复版。新增 `tools/Pack-Release.ps1` 打包两个可直接安装的 SSMS 发布载荷 zip；部署脚本 `-WhatIf` 全只读、删除私有注册表前自动备份、失败即报错；Release 解决方案测试配置改回 `Release|x86` 并使用精确测试路径（去除“最新 exe”兜底）；T-SQL 双引号支持 `SET QUOTED_IDENTIFIER OFF`（新增 5 项用例）。自动化测试由 138 增至 **143 项**，现代 VSIX（0.3.2，8 条目）与 Legacy 负载双校验通过；功能与交互同 0.3.1。
 - 0.3.1：工程修复版，功能与 0.3.0 一致、测试仍为 138 项；现代工程的 Visual Studio 引用全部改为官方 VSSDK 17 NuGet `PackageReference`（删除写死 `.packages` 的 VSSDK.BuildTools 内部 HintPath），从根本上消除 IDE 设计时命名空间报红，并验证与 NuGet 包还原位置无关；另将 `Microsoft.Bcl.AsyncInterfaces` 对齐到 VSSDK 17.14 闭包 / 宿主要求的 9.0.0，消除 MSB3277；解决未安装 .NET SDK 时仅 MSBuild + NuGet 即可构建。另于 2026-10-07 完成 SSMS 22 首轮实机：部署、加载、菜单、状态栏、T-SQL 上下文识别，以及搜狗拼音自动 / 手动切换均通过；微软拼音（未单独测）与 SSMS 18/19/20 待实测。
 - 0.3.0：新增 Transact-SQL 词法与 SSMS 18/19/20/22 双包支持；138 项自动化测试与双包结构校验通过；SSMS 实机验证待补。
