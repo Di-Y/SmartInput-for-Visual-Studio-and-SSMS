@@ -1,0 +1,36 @@
+<Project>
+  <PropertyGroup>
+    <_SmartInputRootPathLength>$([System.String]::Copy('$(MSBuildThisFileDirectory)').Length)</_SmartInputRootPathLength>
+  </PropertyGroup>
+
+  <!--
+    SI0002：仓库路径过长时提前告警。
+    NuGet(经典 .NET Framework 版) 解压包用的是受 MAX_PATH(260) 限制的 Win32 API；
+    仓库路径太长、或把 ZIP 解压进已有项目目录造成 "...-main\...-main" 双层路径时，
+    Microsoft.VisualStudio.* 这类长路径包（例如
+    .packages\microsoft.visualstudio.threading.analyzers\18.12.1\analyzers\cs\cs\...resources.dll）
+    会解压失败，随后报“找不到 X 版本的程序包 / 未能找到路径…的一部分”。
+  -->
+  <Target Name="_SmartInputWarnLongPath"
+          BeforeTargets="Restore;ResolveAssemblyReferencesDesignTime"
+          Condition="$(_SmartInputRootPathLength) &gt; 100">
+    <Warning Code="SI0002"
+             Text="项目路径过长（$(MSBuildThisFileDirectory) 共 $(_SmartInputRootPathLength) 个字符）：NuGet 解压 Microsoft.VisualStudio.* 等长路径包时可能超过 Windows 260 字符上限，导致“找不到版本 / 未能找到路径的一部分”的还原失败。请把项目放到更短的路径（如 D:\SmartInput），并且不要把 ZIP 解压到已有项目目录里（避免 ...-main\...-main 双层路径）。" />
+  </Target>
+
+  <!--
+    SI0001：只在 IDE 设计时构建里生效。没有解析到任何 Microsoft.VisualStudio.* 引用时，
+    说明还原状态还没就绪；给出明确原因，而不是让成片 CS0234/CS0246 看起来像代码错误。
+  -->
+  <Target Name="_SmartInputWarnMissingVsSdkReferences"
+          AfterTargets="ResolveAssemblyReferences"
+          Condition="'$(DesignTimeBuild)' == 'true' and ('$(MSBuildProjectName)' == 'SmartInput.VisualStudio' or '$(MSBuildProjectName)' == 'SmartInput.Ssms.Legacy')">
+    <ItemGroup>
+      <_SmartInputResolvedVsSdk Include="@(ReferencePath)"
+                                Condition="$([System.String]::Copy('%(Filename)').StartsWith('Microsoft.VisualStudio.Shell'))" />
+    </ItemGroup>
+    <Warning Condition="'@(_SmartInputResolvedVsSdk)' == ''"
+             Code="SI0001"
+             Text="NuGet 还原尚未完成或包路径无效：本次设计时构建没有解析到任何 Microsoft.VisualStudio.* 引用，因此会出现成片的“命名空间不存在”。请先运行 .\build.ps1 -Configuration Release（或 msbuild SmartInput.sln -t:Restore），再重新加载解决方案。" />
+  </Target>
+</Project>
