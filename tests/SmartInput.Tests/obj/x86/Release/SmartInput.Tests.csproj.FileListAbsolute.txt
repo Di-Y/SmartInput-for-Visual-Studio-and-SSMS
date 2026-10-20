@@ -1,9 +1,0 @@
-E:\360MoveData\Users\Y\Desktop\0.3.3上传\SmartInput-for-Visual-Studio-and-SSMS-main\tests\SmartInput.Tests\bin\Release\SmartInput.Tests.exe
-E:\360MoveData\Users\Y\Desktop\0.3.3上传\SmartInput-for-Visual-Studio-and-SSMS-main\tests\SmartInput.Tests\bin\Release\SmartInput.Tests.pdb
-E:\360MoveData\Users\Y\Desktop\0.3.3上传\SmartInput-for-Visual-Studio-and-SSMS-main\tests\SmartInput.Tests\bin\Release\SmartInput.Core.dll
-E:\360MoveData\Users\Y\Desktop\0.3.3上传\SmartInput-for-Visual-Studio-and-SSMS-main\tests\SmartInput.Tests\bin\Release\SmartInput.Core.pdb
-E:\360MoveData\Users\Y\Desktop\0.3.3上传\SmartInput-for-Visual-Studio-and-SSMS-main\tests\SmartInput.Tests\obj\x86\Release\SmartInput.Tests.csproj.AssemblyReference.cache
-E:\360MoveData\Users\Y\Desktop\0.3.3上传\SmartInput-for-Visual-Studio-and-SSMS-main\tests\SmartInput.Tests\obj\x86\Release\SmartInput.Tests.csproj.CoreCompileInputs.cache
-E:\360MoveData\Users\Y\Desktop\0.3.3上传\SmartInput-for-Visual-Studio-and-SSMS-main\tests\SmartInput.Tests\obj\x86\Release\SmartInp.8C3F164E.Up2Date
-E:\360MoveData\Users\Y\Desktop\0.3.3上传\SmartInput-for-Visual-Studio-and-SSMS-main\tests\SmartInput.Tests\obj\x86\Release\SmartInput.Tests.exe
-E:\360MoveData\Users\Y\Desktop\0.3.3上传\SmartInput-for-Visual-Studio-and-SSMS-main\tests\SmartInput.Tests\obj\x86\Release\SmartInput.Tests.pdb
