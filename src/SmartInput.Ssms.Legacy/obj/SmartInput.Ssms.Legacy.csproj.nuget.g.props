@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
+    <RestoreSuccess Condition=" '$(RestoreSuccess)' == '' ">True</RestoreSuccess>
+    <RestoreTool Condition=" '$(RestoreTool)' == '' ">NuGet</RestoreTool>
+    <ProjectAssetsFile Condition=" '$(ProjectAssetsFile)' == '' ">$(MSBuildThisFileDirectory)project.assets.json</ProjectAssetsFile>
+    <NuGetPackageRoot Condition=" '$(NuGetPackageRoot)' == '' ">E:\C#-Git-Local-Repository\SmartInputForVisualStudioAndSSMS\.packages</NuGetPackageRoot>
+    <NuGetPackageFolders Condition=" '$(NuGetPackageFolders)' == '' ">E:\C#-Git-Local-Repository\SmartInputForVisualStudioAndSSMS\.packages;D:\VS1.0\NuGetPackages</NuGetPackageFolders>
+    <NuGetProjectStyle Condition=" '$(NuGetProjectStyle)' == '' ">PackageReference</NuGetProjectStyle>
+    <NuGetToolVersion Condition=" '$(NuGetToolVersion)' == '' ">7.0.0</NuGetToolVersion>
+  </PropertyGroup>
+  <ItemGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
+    <SourceRoot Include="E:\C#-Git-Local-Repository\SmartInputForVisualStudioAndSSMS\.packages\" />
+    <SourceRoot Include="D:\VS1.0\NuGetPackages\" />
+  </ItemGroup>
+  <PropertyGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
+    <PkgNewtonsoft_Json Condition=" '$(PkgNewtonsoft_Json)' == '' ">E:\C#-Git-Local-Repository\SmartInputForVisualStudioAndSSMS\.packages\newtonsoft.json\6.0.6</PkgNewtonsoft_Json>
+    <PkgMicrosoft_VisualStudio_Threading_Analyzers Condition=" '$(PkgMicrosoft_VisualStudio_Threading_Analyzers)' == '' ">E:\C#-Git-Local-Repository\SmartInputForVisualStudioAndSSMS\.packages\microsoft.visualstudio.threading.analyzers\15.8.209</PkgMicrosoft_VisualStudio_Threading_Analyzers>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,120 @@
+{
+  "format": 1,
+  "restore": {
+    "E:\\C#-Git-Local-Repository\\SmartInputForVisualStudioAndSSMS\\src\\SmartInput.Ssms.Legacy\\SmartInput.Ssms.Legacy.csproj": {}
+  },
+  "projects": {
+    "E:\\C#-Git-Local-Repository\\SmartInputForVisualStudioAndSSMS\\src\\SmartInput.Core\\SmartInput.Core.csproj": {
+      "restore": {
+        "projectUniqueName": "E:\\C#-Git-Local-Repository\\SmartInputForVisualStudioAndSSMS\\src\\SmartInput.Core\\SmartInput.Core.csproj",
+        "projectName": "SmartInput.Core",
+        "projectPath": "E:\\C#-Git-Local-Repository\\SmartInputForVisualStudioAndSSMS\\src\\SmartInput.Core\\SmartInput.Core.csproj",
+        "UsingMicrosoftNETSdk": false,
+        "frameworks": {
+          "net48": {
+            "framework": "net48",
+            "projectReferences": {}
+          }
+        }
+      },
+      "frameworks": {
+        "net48": {
+          "framework": "net48"
+        }
+      }
+    },
+    "E:\\C#-Git-Local-Repository\\SmartInputForVisualStudioAndSSMS\\src\\SmartInput.Ssms.Legacy\\SmartInput.Ssms.Legacy.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "E:\\C#-Git-Local-Repository\\SmartInputForVisualStudioAndSSMS\\src\\SmartInput.Ssms.Legacy\\SmartInput.Ssms.Legacy.csproj",
+        "projectName": "SmartInput.VisualStudio",
+        "projectPath": "E:\\C#-Git-Local-Repository\\SmartInputForVisualStudioAndSSMS\\src\\SmartInput.Ssms.Legacy\\SmartInput.Ssms.Legacy.csproj",
+        "packagesPath": "E:\\C#-Git-Local-Repository\\SmartInputForVisualStudioAndSSMS\\.packages",
+        "outputPath": "E:\\C#-Git-Local-Repository\\SmartInputForVisualStudioAndSSMS\\src\\SmartInput.Ssms.Legacy\\obj\\",
+        "projectStyle": "PackageReference",
+        "skipContentFileWrite": true,
+        "UsingMicrosoftNETSdk": false,
+        "fallbackFolders": [
+          "D:\\VS1.0\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "E:\\C#-Git-Local-Repository\\SmartInputForVisualStudioAndSSMS\\NuGet.Config",
+          "C:\\Users\\Y\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net48"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net48": {
+            "framework": "net48",
+            "projectReferences": {
+              "E:\\C#-Git-Local-Repository\\SmartInputForVisualStudioAndSSMS\\src\\SmartInput.Core\\SmartInput.Core.csproj": {
+                "projectPath": "E:\\C#-Git-Local-Repository\\SmartInputForVisualStudioAndSSMS\\src\\SmartInput.Core\\SmartInput.Core.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "noWarn": [
+            "NU1701"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net48": {
+          "framework": "net48",
+          "dependencies": {
+            "Microsoft.VisualStudio.Shell.15.0": {
+              "include": "Compile, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "Runtime",
+              "target": "Package",
+              "version": "[15.8.28010, )"
+            },
+            "Microsoft.VisualStudio.Shell.Framework": {
+              "include": "Compile, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "Runtime",
+              "target": "Package",
+              "version": "[15.8.28010, )"
+            },
+            "Microsoft.VisualStudio.Text.UI.Wpf": {
+              "include": "Compile, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "Runtime",
+              "target": "Package",
+              "version": "[15.8.525, )"
+            },
+            "Microsoft.VisualStudio.Threading": {
+              "include": "Compile, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "Runtime",
+              "target": "Package",
+              "version": "[15.8.209, )"
+            }
+          }
+        }
+      },
+      "runtimes": {
+        "win": {
+          "#import": []
+        },
+        "win-arm64": {
+          "#import": []
+        },
+        "win-x64": {
+          "#import": []
+        },
+        "win-x86": {
+          "#import": []
+        }
+      }
+    }
+  }
+}
