@@ -3,10 +3,7 @@
     <Deterministic>true</Deterministic>
     <UseSharedCompilation>false</UseSharedCompilation>
 
-    <!-- 统一使用 PackageReference（本仓库没有任何 packages.config 工程）。 -->
+    <!-- 统一使用 PackageReference（本仓库没有 packages.config 工程）。 -->
     <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
-
-    <!-- 包固定还原到仓库内 .packages（与 NuGet.Config 的 globalPackagesFolder 一致）。 -->
-    <RestorePackagesPath>$(MSBuildThisFileDirectory).packages</RestorePackagesPath>
   </PropertyGroup>
 </Project>
