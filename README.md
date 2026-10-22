@@ -48,6 +48,8 @@ v0.3.4 为缺陷修复版，主要变化：
 
 ![SSMS Smart Input 自动切换输入法演示](docs/assets/SSMS.gif)
 
+![SSMS Smart Input 自动切换输入法演示](docs/assets/XAML.gif)
+
 ## 主要功能
 
 - 根据代码、注释、字符串、XAML 标记等文本上下文自动选择中文或英文输入态。
