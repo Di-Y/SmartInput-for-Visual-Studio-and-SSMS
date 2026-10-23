@@ -60,6 +60,7 @@ v0.3.4 为缺陷修复版，主要变化：
 - 有选区、多光标、输入法组词或编辑器失焦时暂停自动切换；调试器的监视 / 即时 / 快速监视表达式窗口不接管。
 - 不修改源代码、不自动替换标点，不联网、不采集源码、按键或候选词。
 
+
 ## 支持范围
 
 | 宿主 | 位数 / Shell | 安装方式 |
@@ -176,7 +177,6 @@ XAML 规则（0.3.4 新增）：
 安装位置与权限：当前包未启用 AllUsers，安装器按**当前用户**把文件放到 `%LocalAppData%\Microsoft\SSMS\22.0_<实例>\Extensions\<随机目录>`，**不需要管理员权限**；安装器通常同时列出 Visual Studio 2026 与 SSMS 22，按需勾选即可。建议安装前关闭 SSMS、安装后重启；VSIX 安装无需再手动清理 MEF / 私有注册表缓存。
 
 卸载（三选一）：
-
 - 在 VSIX Installer 的卸载入口中卸载 SSMS 22 下的本扩展；
 - 命令行运行 SSMS 22 自带的卸载入口：`"<SSMS 22 安装目录>\Common7\IDE\VSIXInstaller.exe" /uninstall:SmartInput.VisualStudio.943daace-d510-4e75-b17c-715cf0602c01`（安装器同时装有 VS 2026 和 SSMS 22 时，可加 `/appName:"SQL Server Management Studio 22"` 限定目标；卸载同样无需管理员权限）；
 - 用手动部署脚本 `Deploy-SSMS22.ps1 -Uninstall` 清理脚本平铺的副本。
@@ -297,6 +297,34 @@ powershell -ExecutionPolicy Bypass -File .\Deploy-SSMS-Legacy.ps1 -Uninstall
 
 生成的 `SmartInput-SSMS22.zip`（现代 VSIX + `Deploy-SSMS22.ps1` + 安装说明，其中 VSIX 在 SSMS 22 上可直接双击安装）和 `SmartInput-SSMS-Legacy.zip`（Legacy 四个平铺文件 + `Deploy-SSMS-Legacy.ps1` + 安装说明）位于 `artifacts/`。完整验证记录见 [docs/VALIDATION.md](docs/VALIDATION.md)，实机回归项目见 [docs/MANUAL-TESTS.md](docs/MANUAL-TESTS.md)。
 
+## 构建与测试
+
+构建需要 MSBuild（Visual Studio 2022 17.14+ 或兼容版本）和 .NET Framework 4.8 目标包。**不需要单独安装 .NET SDK，也不要求预装 Visual Studio 扩展开发工作负载**；VSSDK 17、VSSDK 15 和 VSIX 构建依赖由 NuGet 还原到项目的 `.packages` 目录。
+
+```powershell
+# 还原、Release 构建、运行测试并校验两套包
+.\build.ps1 -Configuration Release
+
+# 已还原依赖时可离线构建
+.\build.ps1 -Configuration Release -SkipRestore
+
+# 也可显式指定 MSBuild
+.\build.ps1 -Configuration Release -MSBuildPath 'C:\Path\To\MSBuild.exe'
+```
+
+脚本不会安装扩展、启动 Visual Studio / SSMS 或修改系统输入法。一次构建会产生两套不可互换的二进制：
+
+- 现代包（x64，VSSDK 17）：`src/SmartInput.VisualStudio/bin/Release/SmartInput.VisualStudio.vsix`，用于 Visual Studio 2022/2026 与 SSMS 22。
+- Legacy 包（AnyCPU，绑定 VSSDK 15）：`src/SmartInput.Ssms.Legacy/bin/Release/`，用于 32 位 SSMS 18/19/20。
+
+`tools/Verify-Package.ps1` 校验现代 VSIX，`tools/Verify-LegacyPackage.ps1` 校验 Legacy 负载。制作发布附件时运行：
+
+```powershell
+.\tools\Pack-Release.ps1 -Build
+```
+
+生成的 `SmartInput-SSMS22.zip` 和 `SmartInput-SSMS-Legacy.zip` 位于 `artifacts/`。完整验证记录见 [docs/VALIDATION.md](docs/VALIDATION.md)，实机回归项目见 [docs/MANUAL-TESTS.md](docs/MANUAL-TESTS.md)。
+
 ## 兼容性与已知限制
 
 截至 v0.3.4，**177 项自动化测试全部通过**（0.3.0 在 0.2.1 的 104 项基础上新增 34 项 T-SQL 用例；0.3.2 再补 5 项 `SET QUOTED_IDENTIFIER ON/OFF` 用例；0.3.4 补 28 项 XAML 用例与 6 项输入法切换重同步用例），包含四语言随机文本边界安全、Profile 匹配、23 项光标绘制与生命周期检查，以及离屏 WPF 渲染的颜色像素检查。现代 VSIX 与 Legacy 负载的结构、目标版本、依赖隔离、AnyCPU / VSSDK 15 绑定均通过脚本校验。该结果是对应发布提交的验证快照；仓库当前未配置 GitHub Actions，因此不能代替每次提交后的持续集成检查。
@@ -370,5 +398,6 @@ Smart Input 源于中文开发者在代码、注释和字符串之间频繁切�
 提交代码或文档时，请确保提交内容由提交者拥有相应权利，或已取得必要授权；新增第三方依赖时，请同时说明其来源和许可证。
 
 问题反馈请提交到本仓库的 [Issues](https://github.com/Di-Y/SmartInput-for-Visual-Studio-and-SSMS/issues)，并提供系统版本、Visual Studio / SSMS 版本、扩展版本、输入法版本、操作步骤和实际表现。
+
 
 参考：[SSMS 版本与扩展兼容说明](https://learn.microsoft.com/sql/ssms/sql-server-management-studio-changelog-ssms)、[VS 2026 扩展兼容模型](https://learn.microsoft.com/zh-cn/visualstudio/extensibility/migration/extension-compatibility?view=visualstudio)、[VS 光标格式接口](https://learn.microsoft.com/en-us/visualstudio/extensibility/walkthrough-customizing-the-text-view?view=vs-2022)、[WPF InputMethod](https://learn.microsoft.com/en-us/dotnet/api/system.windows.input.inputmethod?view=netframework-4.8)。SSMS 手动部署与缓存清理的实现参考了开源项目 [mourier/sql-pilot](https://github.com/mourier/sql-pilot) 的集成笔记。

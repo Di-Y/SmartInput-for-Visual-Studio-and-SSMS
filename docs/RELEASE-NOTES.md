@@ -1,6 +1,6 @@
 # 发布说明
 
-作者：**我在人间做废物**
+作者：**我在人间做废物**（[@Ysm-04](https://github.com/Ysm-04)）
 
 ## 0.3.4
 
@@ -85,7 +85,7 @@ Release 干净重建 0 错误，**177 项自动化测试全部通过、0 失败*
 
 ### 发布资产
 
-由 `tools/Pack-Release.ps1` 生成（GitHub Release 0.3.2）：
+由 `tools/Pack-Release.ps1` 生成。0.3.2 未在当前主仓库单独发布，相关构建已由主仓库 `v0.3.3` 修正版取代：
 
 - `SmartInput.VisualStudio.vsix`：Visual Studio 2022 / 2026 双击安装。
 - `SmartInput-SSMS22.zip`：SSMS 22（2025，64 位），含现代 VSIX 与 `Deploy-SSMS22.ps1`。
@@ -183,7 +183,7 @@ SHA256：构建完成后以本地 `tools/Verify-Package.ps1`、`tools/Verify-Leg
 src/SmartInput.VisualStudio/bin/Release/SmartInput.VisualStudio.vsix
 ```
 
-SHA256：构建完成后以 `README.md` 和 `docs/VALIDATION.md` 中记录的值为准。
+SHA256：`7A0679D76B1865B1590A3B2F7D31CD3C622A4005F95A556884EC3436F038E65D`（历史发布资产）。
 
 ### 修复
 

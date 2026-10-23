@@ -20,7 +20,8 @@ Visual Studio 编辑器的 `CaretAdornmentLayer` 会读取 `Plain Text`、`Caret
 
 ## 验证结果
 
-- 0.2.0 Release 构建通过，104 项自动化测试通过。
+- 以下为该光标修复在 0.2.0 发布时的历史验证结果；当前版本的完整验证状态见 [验证报告](VALIDATION.md)。
+- 0.2.0 Release 构建通过，当时的 104 项自动化测试通过。
 - 光标测试覆盖绘制控制、位置、恢复、异常、多视图隔离和生命周期清理。
 - 离屏 `RenderTargetBitmap` 像素检查确认绘制颜色符合预期。
 - Windows 10、Windows 11、Visual Studio 2022、Visual Studio 2026 x64 的实机验证已通过，包含主题切换、DPI、覆盖模式、失焦、多视图和快速切换场景。
